@@ -1,0 +1,88 @@
+/* Retro EGA-ish phosphor look. Layout: viewport + sidebar on top, log below. */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #06060e;
+  color: #9ab0c8;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 16px;
+}
+
+#game {
+  display: grid;
+  grid-template-columns: minmax(320px, 644px) minmax(260px, 1fr);
+  grid-template-rows: auto minmax(120px, 180px);
+  gap: 8px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 12px auto;
+  padding: 0 8px;
+}
+
+#viewport {
+  border: 2px solid #2a4a6a;
+  background: #000;
+  line-height: 0;
+}
+
+#canvas {
+  width: 100%;
+  image-rendering: pixelated;
+}
+
+#sidebar {
+  border: 2px solid #2a4a6a;
+  background: #060a14;
+  padding: 10px;
+  overflow-y: auto;
+  max-height: 420px;
+}
+
+#status { margin-bottom: 10px; border-bottom: 1px solid #1a3050; padding-bottom: 8px; }
+
+.srow { display: flex; justify-content: space-between; font-size: 13px; line-height: 1.5; }
+.slbl { color: #4a708a; }
+
+.menu-title {
+  color: #40e0d0;
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+.mi {
+  padding: 5px 6px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: pre-wrap;
+  min-height: 28px;
+  line-height: 1.4;
+}
+.mi:hover { background: #102038; }
+.mi.sel { background: #143052; color: #e0f0ff; }
+.mi.dis { color: #3a4a5a; cursor: default; }
+
+#log {
+  grid-column: 1 / -1;
+  border: 2px solid #2a4a6a;
+  background: #04060c;
+  padding: 8px 10px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.logline { color: #7a90a8; }
+.logline.good { color: #50d080; }
+.logline.warn { color: #d0b040; }
+.logline.bad { color: #e05050; }
+.logline.hdr { color: #40e0d0; font-weight: bold; }
+.logline.alien { color: #c090e0; }
+
+@media (max-width: 760px) {
+  #game { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(100px, 140px); }
+  #sidebar { max-height: 300px; }
+}

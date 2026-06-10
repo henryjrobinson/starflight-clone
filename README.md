@@ -1,0 +1,79 @@
+# STARFLIGHT — a one-shot tribute
+
+A browser clone of the 1986 EA/Binary Systems classic **Starflight**, built in a
+single autonomous Claude Code session ("how far can you get in one shot").
+Zero dependencies, plain HTML/CSS/JS — no build step, no server required.
+
+## How to play
+
+Open `index.html` in any browser (double-click it), or:
+
+```sh
+cd starflight-clone
+python3 -m http.server 8080   # then visit http://localhost:8080
+```
+
+**Controls**
+
+- Arrow keys / WASD — fly the ship (hyperspace, star systems) and drive the terrain vehicle
+- Bracketed letters (e.g. `[L]`) — menu hotkeys; arrow keys + Enter also work in list menus; clicking works too
+- `M` — galaxy map (in hyperspace)
+
+## The game
+
+The year is 4620. Suns across the sector are flaring and colony worlds are
+burning. Interstel licenses you a ship, a green crew, and 12,000 credits.
+Figure out why the stars are dying — and turn a profit on the way.
+
+**At Starport Arth** (your home base, planet 2 of the Arth system at 125,100):
+
+- **Operations** — your current mission briefing; updates as you find clues
+- **Personnel** — hire crew from 5 races (Human, Velox, Thrynn, Elowan, Android)
+  and train Science / Navigation / Engineering / Communications / Medicine.
+  Races have different aptitude caps; skills genuinely matter (fuel efficiency,
+  scan detail, weapon damage, dialogue hints, healing).
+- **Trade Depot** — sell mined minerals and captured lifeforms, buy fuel
+- **Ship Configuration** — engines, shields, armor, lasers, missiles (classes
+  1–5), cargo pods, hull repairs
+
+**Out there:**
+
+- A seeded galaxy of 46 star systems with ~170 procedurally generated planets
+- Land on rocky worlds, drive the terrain vehicle, mine 19 minerals (sell
+  them back home), capture lifeforms for the Science Institute, survive lava,
+  heat, and blizzards
+- Five alien races with territory, dispositions, and dialogue: hail them with
+  a Friendly / Hostile / Obsequious posture and interrogate them about the
+  Ancients and the flares. Some respond to flattery. Some only to force.
+  One doesn't respond at all.
+- Turn-based ship combat with range envelopes (lasers ≤60, missiles ≤150),
+  fleeing, surrenders, salvage, and races that *remember* unprovoked attacks
+- Run out of fuel and engineering will crack raw Endurium from your cargo —
+  or an Interstel tug hauls you home for 25% of your credits
+
+**The story** (light spoilers): find ANCIENT RUINS on outlying worlds. A
+recovered tablet starts a chain — an artifact on a specific world, coordinates
+held by alien races who must be persuaded (or beaten) into sharing them, a
+guarded endgame system, and a final action that stops the flares. It's
+winnable in roughly 30–60 minutes; the win screen scores you on days elapsed,
+earnings, and kills.
+
+The game auto-saves to browser localStorage every time you dock.
+
+## Development
+
+- `node test/smoke.js` — headless smoke test with a stub DOM; boots the game
+  and plays the entire story through to victory (41 checks)
+- World generation is seeded (mulberry32, seed 1986), so the galaxy — and the
+  coordinates aliens quote at you — is identical every run
+
+## What's faithful vs. simplified
+
+Faithful in spirit: starport loop (ops/crew/trade/outfit), crew skills and
+training, hyperspace vs. system navigation with fuel economics, planet
+scan → land → mine in a terrain vehicle, alien comms with postures, Endurium
+as fuel, the dying-suns mystery.
+
+Simplified: combat is menu-turn-based rather than real-time; one ship per
+encounter; the story is a 3-artifact chain rather than the full plot; no
+planet recommendation/colonization mechanic; no continuum flux network.

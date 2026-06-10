@@ -88,37 +88,51 @@
     const p = orbit.p;
     const type = SF.data.PLANET_TYPES[p.type];
     ctx.fillStyle = '#000010';
-    ctx.fillRect(0, 0, 640, 400);
-    const rng = SF.mulberry32(p.seed);
-    ctx.fillStyle = '#283040';
-    for (let i = 0; i < 60; i++) ctx.fillRect(SF.randInt(rng, 0, 639), SF.randInt(rng, 0, 399), 1, 1);
-    // planet disc with banded shading
-    const cx = 320, cy = 190, r = 110;
-    for (let band = 3; band >= 0; band--) {
-      ctx.fillStyle = type.colors[band];
-      ctx.beginPath();
-      ctx.arc(cx - band * 8, cy - band * 8, r - band * 14, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillRect(0, 0, SF.VW, SF.VH);
+    SF.gfx.nebula(ctx, p.seed % 1000, ['#101a3a', '#26103a', '#0a2a3a']);
+    SF.gfx.starfield(ctx, p.seed % 97, 0, 0, 160, 0, '#4a566e', 2);
+
+    const r = 195;
+    const isCrystal = p.special === 'crystal';
+    SF.gfx.planetSphere(ctx, SF.VW / 2, SF.VH / 2 + 16, isCrystal ? r + Math.sin(SF.time * 3) * 4 : r,
+      type.colors, p.seed, {
+        bands: p.type === 'gas',
+        ring: p.type === 'gas' && p.size >= 7,
+        atmo: (p.type === 'ocean' || p.type === 'jungle') ? 'rgba(120,200,255,0.5)' :
+          isCrystal ? 'rgba(120,255,255,0.8)' : null,
+      });
+    if (isCrystal) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(140,255,255,0.35)';
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(SF.VW / 2, SF.VH / 2 + 16, r + 16 + i * 14 + Math.sin(SF.time * 4 + i) * 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
-    // surface mottling
-    for (let i = 0; i < 90; i++) {
-      const ang = rng() * Math.PI * 2;
-      const rr = rng() * (r - 12);
-      ctx.fillStyle = type.colors[SF.randInt(rng, 0, 3)];
-      ctx.fillRect(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr, SF.randInt(rng, 3, 10), SF.randInt(rng, 2, 5));
+
+    ctx.fillStyle = '#cfe0f4';
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText(p.name.toUpperCase(), 18, 32);
+    ctx.fillStyle = '#7e93b4';
+    ctx.font = '13px monospace';
+    ctx.fillText(type.name + '  ·  ' + p.gravity + 'g  ·  ' + type.temp, 18, 54);
+    if (orbit.scanned) {
+      ctx.fillText('minerals: ' + ['negligible', 'low', 'moderate', 'HIGH'][p.rich] +
+        '   life: ' + ['none', 'sparse', 'moderate', 'ABUNDANT'][p.bio], 18, 76);
+      if (p.ruins && SF.skill(SF.s, 'science') >= 30) {
+        ctx.fillStyle = '#50d080';
+        ctx.fillText('ANCIENT RUINS DETECTED', 18, 98);
+      }
     }
-    ctx.fillStyle = '#a0b0c8';
-    ctx.font = 'bold 14px monospace';
-    ctx.fillText(p.name.toUpperCase() + ' — ' + type.name, 12, 22);
-    ctx.font = '12px monospace';
-    ctx.fillStyle = '#607090';
-    ctx.fillText('In orbit. ' + (orbit.scanned ? '' : 'Sensors ready.'), 12, 388);
+    SF.gfx.hudBar(ctx, 'In orbit. ' + (orbit.scanned ? 'Scan complete.' : 'Sensors ready — [S] to scan.'));
   };
 
   // -------------------------------------------------------------- surface
   const surf = {};
   SF.modes.surface = surf;
-  const TW = 64, TH = 38, TILE = 10;
+  const TW = 64, TH = 40, TILE = 15;
   const T_LIQUID = 0, T_PLAIN = 1, T_HILL = 2, T_MOUNT = 3;
 
   // bilinear value noise from the planet's seed
@@ -132,8 +146,10 @@
     }
     const liquidFrac = { ocean: 0.5, jungle: 0.35, ice: 0.3, rock: 0.18, desert: 0.08, molten: 0.25 }[p.type] || 0.2;
     const tiles = [];
+    const shade = [];
     for (let y = 0; y < TH; y++) {
       tiles.push([]);
+      shade.push([]);
       for (let x = 0; x < TW; x++) {
         const fx = x / TW * (GW - 1), fy = y / TH * (GH - 1);
         const x0 = Math.floor(fx), y0 = Math.floor(fy);
@@ -149,8 +165,10 @@
         else if (v < liquidFrac + 0.62) t = T_HILL;
         else t = T_MOUNT;
         tiles[y].push(t);
+        shade[y].push(rng() * 0.22);
       }
     }
+    surf.shade = shade;
     return tiles;
   }
 
@@ -180,7 +198,6 @@
   }
 
   surf.enter = function (opts) {
-    const s = SF.s;
     surf.sys = SF.galaxy.byId[opts.sysId];
     surf.p = surf.sys.planets[opts.slot];
     surf.key = opts.sysId + ':' + opts.slot;
@@ -202,14 +219,15 @@
     surf.ruin = surf.p.ruins ? findLandTile(rng, surf.tiles) : null;
 
     const start = findLandTile(SF.mulberry32(surf.p.seed + 7), surf.tiles);
-    surf.tv = { x: start.x + 0.5, y: start.y + 0.5, integrity: 100 };
+    surf.tv = { x: start.x + 0.5, y: start.y + 0.5, integrity: 100, dir: 0 };
+    surf.target = null;
     surf.fullWarned = false;
     surf.hazardTimer = 0;
 
     SF.ui.setMenu('SURFACE — ' + surf.p.name.toUpperCase(), [
       { key: 'T', label: 'Take off (return to orbit)', fn: takeOff },
     ], { nav: false });
-    SF.ui.log('Terrain vehicle deployed on ' + surf.p.name + '. Drive over deposits to mine them.');
+    SF.ui.log('Terrain vehicle deployed on ' + surf.p.name + '. Drive (or click) over deposits to mine.');
     if (surf.ruin) SF.ui.log('Long-range optics pick out RUINS on this world. Find them.', 'good');
   };
 
@@ -243,6 +261,12 @@
     }
   }
 
+  surf.click = function (px, py) {
+    const tx = px / TILE, ty = py / TILE;
+    if (tx < 0 || ty < 0 || tx >= TW || ty >= TH) return;
+    surf.target = { x: tx, y: ty };
+  };
+
   surf.update = function (dt) {
     const s = SF.s;
     const k = SF.keys;
@@ -251,9 +275,22 @@
     if (k.ArrowRight || k.d) dx += 1;
     if (k.ArrowUp || k.w) dy -= 1;
     if (k.ArrowDown || k.s) dy += 1;
+    if (dx || dy) {
+      surf.target = null;
+    } else if (surf.target) {
+      const tdx = surf.target.x - surf.tv.x, tdy = surf.target.y - surf.tv.y;
+      if (Math.hypot(tdx, tdy) < 0.4) surf.target = null;
+      else {
+        dx = Math.abs(tdx) > 0.2 ? Math.sign(tdx) : 0;
+        dy = Math.abs(tdy) > 0.2 ? Math.sign(tdy) : 0;
+      }
+    }
     const speed = 8 * dt;
-    if (dx && passable(surf.tv.x + dx * speed, surf.tv.y)) surf.tv.x += dx * speed;
-    if (dy && passable(surf.tv.x, surf.tv.y + dy * speed)) surf.tv.y += dy * speed;
+    let movedX = false, movedY = false;
+    if (dx && passable(surf.tv.x + dx * speed, surf.tv.y)) { surf.tv.x += dx * speed; movedX = true; }
+    if (dy && passable(surf.tv.x, surf.tv.y + dy * speed)) { surf.tv.y += dy * speed; movedY = true; }
+    if (dx || dy) surf.tv.dir = Math.atan2(dy, dx);
+    if (surf.target && (dx || dy) && !movedX && !movedY) surf.target = null; // boxed in — let the driver re-route
     s.day += dt * 0.01;
 
     const tx = Math.floor(surf.tv.x), ty = Math.floor(surf.tv.y);
@@ -333,47 +370,87 @@
       for (let x = 0; x < TW; x++) {
         ctx.fillStyle = type.colors[surf.tiles[y][x]];
         ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+        ctx.fillStyle = 'rgba(0,0,10,' + surf.shade[y][x] + ')';
+        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
       }
     }
+    // deposits glint
     for (const d of surf.deposits) {
+      const cx = d.x * TILE + TILE / 2, cy = d.y * TILE + TILE / 2;
+      const pulse = 5 + Math.sin(SF.time * 4 + d.x) * 1.5;
       ctx.fillStyle = SF.data.MINERAL_BY_ID[d.mineral].color;
       ctx.beginPath();
-      ctx.moveTo(d.x * TILE + 5, d.y * TILE);
-      ctx.lineTo(d.x * TILE + 10, d.y * TILE + 5);
-      ctx.lineTo(d.x * TILE + 5, d.y * TILE + 10);
-      ctx.lineTo(d.x * TILE, d.y * TILE + 5);
+      ctx.moveTo(cx, cy - pulse);
+      ctx.lineTo(cx + pulse, cy);
+      ctx.lineTo(cx, cy + pulse);
+      ctx.lineTo(cx - pulse, cy);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = '#000';
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
       ctx.stroke();
     }
+    // lifeforms: pulsing blobs with eye-stalks
     for (const lf of surf.lifeforms) {
+      const cx = lf.x * TILE, cy = lf.y * TILE;
+      const wob = 1 + Math.sin(lf.t * 6) * 0.15;
       ctx.fillStyle = '#40ff80';
       ctx.beginPath();
-      ctx.arc(lf.x * TILE, lf.y * TILE, 3.5, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, 6 * wob, 5 / wob, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#103820';
+      ctx.beginPath();
+      ctx.arc(cx - 2, cy - 2, 1.3, 0, Math.PI * 2);
+      ctx.arc(cx + 2, cy - 2, 1.3, 0, Math.PI * 2);
       ctx.fill();
     }
+    // ruins: a half-buried temple
     if (surf.ruin) {
       const rx = surf.ruin.x * TILE, ry = surf.ruin.y * TILE;
-      ctx.fillStyle = '#e8e8f0';
-      ctx.fillRect(rx - 4, ry - 2, 18, 12);
-      ctx.fillStyle = '#202030';
-      ctx.fillRect(rx + 2, ry + 2, 5, 8);
-      ctx.fillStyle = '#e8e8f0';
-      ctx.fillRect(rx + 1, ry - 8, 3, 7);
-      ctx.fillRect(rx + 8, ry - 8, 3, 7);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(rx - 8, ry + 10, 36, 6);
+      ctx.fillStyle = '#d8dce8';
+      ctx.fillRect(rx - 6, ry - 4, 30, 16);
+      ctx.fillStyle = '#202434';
+      ctx.fillRect(rx + 4, ry + 2, 8, 10);
+      ctx.fillStyle = '#d8dce8';
+      ctx.fillRect(rx - 3, ry - 14, 5, 11);
+      ctx.fillRect(rx + 8, ry - 16, 5, 13);
+      ctx.fillRect(rx + 18, ry - 12, 5, 9);
+      ctx.fillStyle = '#40e0d0';
+      ctx.fillRect(rx + 9, ry - 16 + Math.abs(Math.sin(SF.time * 2)) * 3, 3, 2);
     }
-    // terrain vehicle
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(surf.tv.x * TILE - 4, surf.tv.y * TILE - 3, 8, 6);
+    // terrain vehicle: a little rover
+    const tvx = surf.tv.x * TILE, tvy = surf.tv.y * TILE;
+    ctx.save();
+    ctx.translate(tvx, tvy);
+    ctx.rotate(surf.tv.dir);
+    ctx.fillStyle = '#1a2030';
+    ctx.fillRect(-7, -6, 14, 3);
+    ctx.fillRect(-7, 3, 14, 3);
+    const body = ctx.createLinearGradient(0, -5, 0, 5);
+    body.addColorStop(0, '#f0f4ff');
+    body.addColorStop(1, '#8a96b0');
+    ctx.fillStyle = body;
+    ctx.fillRect(-6, -4, 12, 8);
     ctx.fillStyle = '#3060c0';
-    ctx.fillRect(surf.tv.x * TILE - 2, surf.tv.y * TILE - 2, 4, 2);
+    ctx.fillRect(1, -2.5, 4, 5);
+    ctx.restore();
+    // click target
+    if (surf.target) {
+      SF.gfx.crosshair(ctx, surf.target.x * TILE, surf.target.y * TILE, '#50d080', null);
+    }
 
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(0, 382, 640, 18);
-    ctx.fillStyle = '#9ab0c8';
-    ctx.font = '12px monospace';
-    ctx.fillText('TV ' + Math.max(0, Math.floor(surf.tv.integrity)) + '%   deposits left: ' +
-      surf.deposits.length + '   [T] take off', 8, 395);
+    SF.gfx.hudBar(ctx, '');
+    const frac = Math.max(0, surf.tv.integrity) / 100;
+    ctx.fillStyle = '#7e96b8';
+    ctx.font = '13px monospace';
+    ctx.fillText('TV', 12, SF.VH - 8);
+    ctx.fillStyle = '#0a1420';
+    ctx.fillRect(36, SF.VH - 19, 110, 11);
+    ctx.fillStyle = frac > 0.4 ? '#50d080' : '#e05050';
+    ctx.fillRect(37, SF.VH - 18, 108 * frac, 9);
+    ctx.fillStyle = '#7e96b8';
+    ctx.fillText('deposits left: ' + surf.deposits.length +
+      '   click to drive · drive over deposits to mine · [T] take off', 160, SF.VH - 8);
   };
 })();

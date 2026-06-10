@@ -38,22 +38,28 @@ SF.setMode = function (name, opts) {
 
   title.draw = function (ctx) {
     ctx.fillStyle = '#000010';
-    ctx.fillRect(0, 0, 640, 400);
-    const rng = SF.mulberry32(11);
-    for (let i = 0; i < 120; i++) {
-      ctx.fillStyle = SF.chance(rng, 0.2) ? '#fff' : '#456';
-      ctx.fillRect(SF.randInt(rng, 0, 639), SF.randInt(rng, 0, 399), 2, 2);
-    }
+    ctx.fillRect(0, 0, SF.VW, SF.VH);
+    SF.gfx.nebula(ctx, 31, ['#3a1a5a', '#15355f', '#5a1a30']);
+    SF.gfx.starfield(ctx, 11, 0, 0, 220, 0, '#aabbdd', 2);
+    // a flaring sun and a doomed world set the scene
+    SF.gfx.star(ctx, 720, 150, 38, '#ffe060', true);
+    SF.gfx.planetSphere(ctx, 250, 420, 120, SF.data.PLANET_TYPES.jungle.colors, 77, { atmo: 'rgba(120,200,255,0.5)' });
     ctx.fillStyle = '#40e0d0';
-    ctx.font = 'bold 52px monospace';
-    ctx.fillText('STARFLIGHT', 150, 160);
+    ctx.font = 'bold 76px monospace';
+    ctx.shadowColor = '#40e0d0';
+    ctx.shadowBlur = 22;
+    ctx.fillText('STARFLIGHT', 245, 200);
+    ctx.shadowBlur = 0;
     ctx.fillStyle = '#f0d040';
-    ctx.font = '16px monospace';
-    ctx.fillText('a one-shot tribute to the 1986 classic', 165, 195);
-    ctx.fillStyle = '#607090';
+    ctx.font = '19px monospace';
+    ctx.fillText('a one-shot tribute to the 1986 classic', 285, 240);
+    ctx.fillStyle = '#8aa0c0';
+    ctx.font = '15px monospace';
+    ctx.fillText('The suns are flaring. The colonies are burning.', 300, 310);
+    ctx.fillText('Find out why. Make some money along the way.', 305, 334);
+    ctx.fillStyle = '#56708e';
     ctx.font = '13px monospace';
-    ctx.fillText('The suns are flaring. The colonies are burning.', 170, 260);
-    ctx.fillText('Find out why. Make some money along the way.', 175, 280);
+    ctx.fillText('keyboard or mouse — click menu buttons, click space to fly', 290, 560);
   };
 })();
 
@@ -75,14 +81,19 @@ SF.setMode = function (name, opts) {
   };
   over.update = function () {};
   over.draw = function (ctx) {
-    ctx.fillStyle = '#100000';
-    ctx.fillRect(0, 0, 640, 400);
+    ctx.fillStyle = '#100004';
+    ctx.fillRect(0, 0, SF.VW, SF.VH);
+    SF.gfx.nebula(ctx, 66, ['#5a1010', '#3a1a20', '#401030']);
+    SF.gfx.starfield(ctx, 12, 0, 0, 140, 0, '#886677', 2);
     ctx.fillStyle = '#ff4040';
-    ctx.font = 'bold 40px monospace';
-    ctx.fillText('SHIP DESTROYED', 145, 170);
+    ctx.font = 'bold 56px monospace';
+    ctx.shadowColor = '#ff2020';
+    ctx.shadowBlur = 18;
+    ctx.fillText('SHIP DESTROYED', 215, 250);
+    ctx.shadowBlur = 0;
     ctx.fillStyle = '#a08080';
-    ctx.font = '13px monospace';
-    ctx.fillText(over.reason, 80, 220);
+    ctx.font = '15px monospace';
+    ctx.fillText(over.reason, 215, 320);
   };
 
   const win = {};
@@ -102,23 +113,32 @@ SF.setMode = function (name, opts) {
   win.draw = function (ctx) {
     const s = SF.s;
     ctx.fillStyle = '#000018';
-    ctx.fillRect(0, 0, 640, 400);
+    ctx.fillRect(0, 0, SF.VW, SF.VH);
+    SF.gfx.nebula(ctx, 99, ['#105a5a', '#1a3a6a', '#3a5a20']);
     const rng = SF.mulberry32(99);
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 300; i++) {
       ctx.fillStyle = ['#60e0e0', '#f0d040', '#ffffff', '#80ffc0'][SF.randInt(rng, 0, 3)];
-      ctx.fillRect(SF.randInt(rng, 0, 639), SF.randInt(rng, 0, 399), 2, 2);
+      ctx.globalAlpha = 0.4 + rng() * 0.6;
+      ctx.fillRect(SF.randInt(rng, 0, SF.VW - 1), SF.randInt(rng, 0, SF.VH - 1), 2, 2);
     }
+    ctx.globalAlpha = 1;
+    // the shattered crystal world
+    SF.gfx.star(ctx, 480, 170, 30 + Math.sin(SF.time * 2) * 4, '#80f0f0', false);
     ctx.fillStyle = '#60e0e0';
-    ctx.font = 'bold 36px monospace';
-    ctx.fillText('THE SECTOR IS SAVED', 110, 130);
+    ctx.font = 'bold 50px monospace';
+    ctx.shadowColor = '#40e0d0';
+    ctx.shadowBlur = 20;
+    ctx.fillText('THE SECTOR IS SAVED', 185, 300);
+    ctx.shadowBlur = 0;
     ctx.fillStyle = '#d0e0f0';
-    ctx.font = '14px monospace';
-    ctx.fillText('The crystal world is shattered. The suns grow calm.', 130, 180);
-    ctx.fillText('Days elapsed: ' + Math.floor(s.day), 130, 220);
-    ctx.fillText('Lifetime earnings: ' + SF.ui.fmt(s.earnings) + ' cr', 130, 240);
-    ctx.fillText('Hostiles destroyed: ' + s.kills, 130, 260);
+    ctx.font = '17px monospace';
+    ctx.fillText('The crystal world is shattered. The suns grow calm.', 230, 350);
+    ctx.fillText('Days elapsed: ' + Math.floor(s.day), 230, 400);
+    ctx.fillText('Lifetime earnings: ' + SF.ui.fmt(s.earnings) + ' cr', 230, 426);
+    ctx.fillText('Hostiles destroyed: ' + s.kills, 230, 452);
     ctx.fillStyle = '#f0d040';
-    ctx.fillText('Final score: ' + SF.ui.fmt(Math.max(0, 100000 - Math.floor(s.day) * 100) + s.earnings + s.kills * 500), 130, 300);
+    ctx.font = 'bold 19px monospace';
+    ctx.fillText('FINAL SCORE: ' + SF.ui.fmt(Math.max(0, 100000 - Math.floor(s.day) * 100) + s.earnings + s.kills * 500), 230, 500);
   };
 })();
 
@@ -136,6 +156,23 @@ SF.boot = function () {
   });
   window.addEventListener('keyup', function (e) {
     SF.keys[e.key] = false;
+  });
+
+  // mouse: clicks route to the active mode in canvas coordinates
+  function canvasXY(e) {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect || !rect.width) return null;
+    return {
+      x: (e.clientX - rect.left) * (canvas.width / rect.width),
+      y: (e.clientY - rect.top) * (canvas.height / rect.height),
+    };
+  }
+  canvas.addEventListener('click', function (e) {
+    const p = canvasXY(e);
+    if (p && SF.mode && SF.mode.click) SF.mode.click(p.x, p.y);
+  });
+  canvas.addEventListener('mousemove', function (e) {
+    SF.mouse = canvasXY(e);
   });
 
   SF.setMode('title', {});

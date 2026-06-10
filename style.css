@@ -1,88 +1,150 @@
-/* Retro EGA-ish phosphor look. Layout: viewport + sidebar on top, log below. */
+/* Ship's-console theme: beveled panels, glowing accents, status bars.
+   Layout: large viewport + control column, message log across the bottom. */
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   padding: 0;
-  background: #06060e;
+  background: radial-gradient(ellipse at 50% -10%, #0c1226 0%, #05060e 55%, #020308 100%);
   color: #9ab0c8;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: Menlo, Consolas, 'Courier New', monospace;
   font-size: 16px;
+  min-height: 100vh;
 }
 
 #game {
   display: grid;
-  grid-template-columns: minmax(320px, 644px) minmax(260px, 1fr);
-  grid-template-rows: auto minmax(120px, 180px);
-  gap: 8px;
+  grid-template-columns: minmax(480px, 968px) minmax(300px, 360px);
+  grid-template-rows: auto minmax(130px, 190px);
+  gap: 10px;
   width: 100%;
-  max-width: 1000px;
-  margin: 12px auto;
-  padding: 0 8px;
+  max-width: 1360px;
+  margin: 14px auto;
+  padding: 0 10px;
 }
 
 #viewport {
-  border: 2px solid #2a4a6a;
+  border: 1px solid #2a4a6a;
+  border-radius: 6px;
+  box-shadow: 0 0 24px rgba(40, 120, 200, 0.18), inset 0 0 0 1px #0a1828;
   background: #000;
   line-height: 0;
+  overflow: hidden;
 }
 
 #canvas {
   width: 100%;
-  image-rendering: pixelated;
+  cursor: crosshair;
 }
 
 #sidebar {
-  border: 2px solid #2a4a6a;
-  background: #060a14;
-  padding: 10px;
+  border: 1px solid #2a4a6a;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #0a1220 0%, #060a14 100%);
+  box-shadow: inset 0 1px 0 rgba(120, 180, 255, 0.08);
+  padding: 12px;
   overflow-y: auto;
-  max-height: 420px;
+  max-height: 620px;
 }
 
-#status { margin-bottom: 10px; border-bottom: 1px solid #1a3050; padding-bottom: 8px; }
+#status {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #1a3050;
+  padding-bottom: 10px;
+}
 
-.srow { display: flex; justify-content: space-between; font-size: 13px; line-height: 1.5; }
-.slbl { color: #4a708a; }
+.srow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.slbl { color: #4a708a; letter-spacing: 1px; }
+
+.bar-row { margin: 4px 0; }
+.bar-lbl {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #4a708a;
+  letter-spacing: 1px;
+}
+.bar {
+  height: 9px;
+  background: #0a1420;
+  border: 1px solid #1a3050;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bar .fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.25s ease;
+}
 
 .menu-title {
   color: #40e0d0;
   font-weight: bold;
   font-size: 14px;
-  margin-bottom: 6px;
-  letter-spacing: 1px;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(64, 224, 208, 0.45);
 }
 
 .mi {
-  padding: 5px 6px;
+  padding: 7px 9px;
+  margin: 3px 0;
   font-size: 13px;
-  cursor: pointer;
-  white-space: pre-wrap;
-  min-height: 28px;
   line-height: 1.4;
+  cursor: pointer;
+  min-height: 30px;
+  white-space: pre-wrap;
+  border: 1px solid #16304e;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #0d1a2e 0%, #091324 100%);
+  box-shadow: inset 0 1px 0 rgba(140, 200, 255, 0.07);
 }
-.mi:hover { background: #102038; }
-.mi.sel { background: #143052; color: #e0f0ff; }
-.mi.dis { color: #3a4a5a; cursor: default; }
+.mi:hover {
+  border-color: #2e5d92;
+  background: linear-gradient(180deg, #142742 0%, #0d1a30 100%);
+  color: #cfe4ff;
+}
+.mi.sel {
+  border-color: #40e0d0;
+  background: linear-gradient(180deg, #14324a 0%, #0e2238 100%);
+  color: #e0f0ff;
+  box-shadow: 0 0 10px rgba(64, 224, 208, 0.22), inset 0 1px 0 rgba(140, 200, 255, 0.1);
+}
+.mi.dis {
+  color: #3a4a5a;
+  cursor: default;
+  border-color: #0e1c30;
+  background: #070d18;
+  box-shadow: none;
+}
 
 #log {
   grid-column: 1 / -1;
-  border: 2px solid #2a4a6a;
-  background: #04060c;
-  padding: 8px 10px;
+  border: 1px solid #2a4a6a;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #060c18 0%, #04060c 100%);
+  padding: 9px 12px;
   overflow-y: auto;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .logline { color: #7a90a8; }
 .logline.good { color: #50d080; }
 .logline.warn { color: #d0b040; }
 .logline.bad { color: #e05050; }
-.logline.hdr { color: #40e0d0; font-weight: bold; }
+.logline.hdr { color: #40e0d0; font-weight: bold; text-shadow: 0 0 6px rgba(64, 224, 208, 0.35); }
 .logline.alien { color: #c090e0; }
 
-@media (max-width: 760px) {
-  #game { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(100px, 140px); }
-  #sidebar { max-height: 300px; }
+@media (max-width: 820px) {
+  #game {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(110px, 150px);
+  }
+  #sidebar { max-height: 320px; }
 }

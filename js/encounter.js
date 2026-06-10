@@ -286,48 +286,51 @@
 
   enc.draw = function (ctx) {
     ctx.fillStyle = '#000008';
-    ctx.fillRect(0, 0, 640, 400);
-    const rng = SF.mulberry32(4242);
-    ctx.fillStyle = '#283048';
-    for (let i = 0; i < 80; i++) ctx.fillRect(SF.randInt(rng, 0, 639), SF.randInt(rng, 0, 399), 1, 1);
+    ctx.fillRect(0, 0, SF.VW, SF.VH);
+    SF.gfx.nebula(ctx, 4242, ['#401030', '#102a50', '#3a1a10']);
+    SF.gfx.starfield(ctx, 4243, 0, 0, 170, 0, '#3c4862', 2);
 
-    // player ship, lower left
-    ctx.save();
-    ctx.translate(140, 300);
-    ctx.rotate(-0.5);
-    ctx.fillStyle = '#d0d8ff';
-    ctx.beginPath();
-    ctx.moveTo(26, 0); ctx.lineTo(-18, 15); ctx.lineTo(-9, 0); ctx.lineTo(-18, -15);
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
+    const px = 230, py = SF.VH - 170;
+    const ex = Math.min(SF.VW - 90, SF.VW / 2 + enc.range * 1.9);
+    const ey = Math.max(90, SF.VH / 2 - 80 - enc.range * 0.9);
 
-    // enemy ship, upper right — distance scales its offset
-    const ex = 320 + enc.range * 1.3, ey = 210 - enc.range * 0.9;
+    // dashed engagement line with range readout at its midpoint
     ctx.save();
-    ctx.translate(Math.min(600, ex), Math.max(50, ey));
-    ctx.rotate(Math.PI + 0.4);
-    ctx.fillStyle = enc.race.color;
+    ctx.strokeStyle = 'rgba(150,170,210,0.25)';
+    ctx.setLineDash([4, 8]);
     ctx.beginPath();
-    ctx.moveTo(20, 0); ctx.lineTo(-14, 12); ctx.lineTo(-7, 0); ctx.lineTo(-14, -12);
-    ctx.closePath(); ctx.fill();
+    ctx.moveTo(px, py);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
     ctx.restore();
+    ctx.fillStyle = '#cfe0f4';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText(Math.round(enc.range) + '', (px + ex) / 2 - 8, (py + ey) / 2 - 8);
+
+    const angToEnemy = Math.atan2(ey - py, ex - px);
+    SF.gfx.ship(ctx, px, py, angToEnemy, 3.2, '#c8d4ff', true);
+    SF.gfx.ship(ctx, ex, ey, angToEnemy + Math.PI, 2.6, enc.race.color, isHostile());
 
     // readouts
     const s = SF.s;
     ctx.fillStyle = '#9ab0c8';
-    ctx.font = '12px monospace';
-    ctx.fillText('RANGE: ' + Math.round(enc.range) + '   (laser<=60, missile<=150)', 10, 20);
-    drawBar(ctx, 10, 30, 'YOUR HULL', s.ship.hull / s.ship.hullMax, '#40c0ff');
-    drawBar(ctx, 10, 48, enc.race.name.toUpperCase(), Math.max(0, enc.enemy.hull / enc.enemy.hullMax), enc.race.color);
+    ctx.font = '13px monospace';
+    ctx.fillText('RANGE ' + Math.round(enc.range) + '   laser envelope <=60 · missile envelope <=150', 14, 26);
+    drawBar(ctx, 14, 40, 'YOUR HULL', s.ship.hull / s.ship.hullMax, '#40c0ff');
+    drawBar(ctx, 14, 62, enc.race.name.toUpperCase(), Math.max(0, enc.enemy.hull / enc.enemy.hullMax), enc.race.color);
+    SF.gfx.hudBar(ctx, isHostile() ? 'WEAPONS FREE — pick an action from the console' :
+      'Contact is not hostile. Hail them, or break contact.');
   };
 
   function drawBar(ctx, x, y, label, frac, color) {
-    ctx.fillStyle = '#202838';
-    ctx.fillRect(x, y, 160, 10);
+    ctx.fillStyle = '#0a1420';
+    ctx.fillRect(x, y, 230, 13);
+    ctx.strokeStyle = '#1a3050';
+    ctx.strokeRect(x, y, 230, 13);
     ctx.fillStyle = color;
-    ctx.fillRect(x, y, Math.max(0, 160 * frac), 10);
+    ctx.fillRect(x + 1, y + 1, Math.max(0, 228 * frac), 11);
     ctx.fillStyle = '#9ab0c8';
-    ctx.font = '10px monospace';
-    ctx.fillText(label, x + 166, y + 9);
+    ctx.font = '11px monospace';
+    ctx.fillText(label, x + 238, y + 11);
   }
 })();

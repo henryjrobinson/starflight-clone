@@ -1,6 +1,6 @@
 // Space flight: 'hyper' (galaxy grid, burns fuel) and 'system' (local
-// star system, leads to orbit). Arrow keys / WASD steer. M toggles the
-// galaxy map in hyperspace.
+// star system, leads to orbit). Steer with arrows/WASD, or click a
+// destination — the ship flies itself. Arrow keys disengage autopilot.
 (function () {
   // Which race's space are we in? Used for encounter rolls and comm flavor.
   SF.territoryRace = function (hx, hy) {
@@ -22,21 +22,6 @@
     return { dx: dx, dy: dy };
   }
 
-  function drawShip(ctx, x, y, dir, color) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(dir);
-    ctx.fillStyle = color || '#e0e0ff';
-    ctx.beginPath();
-    ctx.moveTo(8, 0);
-    ctx.lineTo(-6, 5);
-    ctx.lineTo(-3, 0);
-    ctx.lineTo(-6, -5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
   function rollEncounter(perSecond, dt) {
     return Math.random() < perSecond * dt;
   }
@@ -54,6 +39,7 @@
     s.credits -= fee;
     s.ship.fuel = 10;
     s.hx = 125; s.hy = 100;
+    s.course = null;
     SF.ui.log('STRANDED. An Interstel tug hauls you back to Arth. Salvage fee: ' + SF.ui.fmt(fee) + ' cr.', 'bad');
     SF.setMode('system', { sysId: 'arth', fromHyper: true });
     return true;
@@ -62,45 +48,76 @@
   // ---------------------------------------------------------------- hyper
   const hyper = {};
   SF.modes.hyper = hyper;
+  const HSC = 12; // px per hyper unit; view window is 80x50 units
 
   hyper.enter = function () {
     hyper.dir = 0;
+    hyper.moving = false;
     hyper.cooldown = 1.5;  // don't instantly re-enter the system we just left
     SF.ui.setMenu('HYPERSPACE', [
       { key: 'M', label: 'Galaxy starmap', fn: function () {
         SF.setMode('starmap', { back: { mode: 'hyper' } });
       } },
     ], { nav: false });
-    SF.ui.log('Entering hyperspace. Arrow keys to fly. [M] for the starmap.');
+    SF.ui.log('Entering hyperspace. Fly with arrows, or click a destination. [M] starmap.');
+  };
+
+  hyper.click = function (px, py) {
+    const s = SF.s;
+    const ox = s.hx - SF.VW / HSC / 2, oy = s.hy - SF.VH / HSC / 2;
+    let wx = ox + px / HSC, wy = oy + py / HSC;
+    // snap to a nearby system
+    const near = SF.galaxy.systems.find(sys =>
+      Math.hypot((sys.x - ox) * HSC - px, (sys.y - oy) * HSC - py) < 22);
+    if (near) { wx = near.x; wy = near.y; }
+    s.course = {
+      x: Math.max(0, Math.min(SF.HYPER_W, wx)),
+      y: Math.max(0, Math.min(SF.HYPER_H, wy)),
+    };
+    SF.ui.log('Course laid in: ' + Math.round(s.course.x) + ',' + Math.round(s.course.y) +
+      (near ? ' (' + near.name + ')' : '') + '. Autopilot engaged.', 'good');
   };
 
   hyper.update = function (dt) {
     const s = SF.s;
-    const v = moveVector();
     hyper.cooldown = Math.max(0, hyper.cooldown - dt);
+    let v = moveVector();
     if (v.dx || v.dy) {
-      const speed = 8 + s.ship.engine * 2;
-      const dist = speed * dt;
-      s.hx = Math.max(0, Math.min(SF.HYPER_W, s.hx + v.dx * dist));
-      s.hy = Math.max(0, Math.min(SF.HYPER_H, s.hy + v.dy * dist));
-      s.ship.fuel = Math.max(0, s.ship.fuel - dist * SF.fuelPerDist(s));
-      s.day += dist * 0.05;
-      hyper.dir = Math.atan2(v.dy, v.dx);
-      if (outOfFuel(s)) return;
+      if (s.course) { s.course = null; SF.ui.log('Autopilot disengaged.'); }
+    } else if (s.course) {
+      const dx = s.course.x - s.hx, dy = s.course.y - s.hy;
+      const d = Math.hypot(dx, dy);
+      if (d < 0.6) {
+        s.course = null;
+        SF.ui.log('Autopilot: arrived at destination.', 'good');
+      } else {
+        v = { dx: dx / d, dy: dy / d };
+      }
+    }
+    hyper.moving = !!(v.dx || v.dy);
+    if (!hyper.moving) return;
 
-      if (hyper.cooldown <= 0) {
-        const near = SF.galaxy.systems.find(sys => Math.hypot(sys.x - s.hx, sys.y - s.hy) < 2.5);
-        if (near) {
-          s.visited[near.id] = true;
-          SF.setMode('system', { sysId: near.id, fromHyper: true });
-          return;
-        }
-        if (enterFlux(s)) return;
+    const speed = 8 + s.ship.engine * 2;
+    const dist = speed * dt;
+    s.hx = Math.max(0, Math.min(SF.HYPER_W, s.hx + v.dx * dist));
+    s.hy = Math.max(0, Math.min(SF.HYPER_H, s.hy + v.dy * dist));
+    s.ship.fuel = Math.max(0, s.ship.fuel - dist * SF.fuelPerDist(s));
+    s.day += dist * 0.05;
+    hyper.dir = Math.atan2(v.dy, v.dx);
+    if (outOfFuel(s)) return;
+
+    if (hyper.cooldown <= 0) {
+      const near = SF.galaxy.systems.find(sys => Math.hypot(sys.x - s.hx, sys.y - s.hy) < 2.5);
+      if (near) {
+        s.visited[near.id] = true;
+        SF.setMode('system', { sysId: near.id, fromHyper: true });
+        return;
       }
-      const race = SF.territoryRace(s.hx, s.hy);
-      if (rollEncounter(SF.data.RACES[race].freq / 6, dt)) {
-        SF.setMode('encounter', { raceId: race, from: 'hyper' });
-      }
+      if (enterFlux(s)) return;
+    }
+    const race = SF.territoryRace(s.hx, s.hy);
+    if (rollEncounter(SF.data.RACES[race].freq / 6, dt)) {
+      SF.setMode('encounter', { raceId: race, from: 'hyper' });
     }
   };
 
@@ -132,9 +149,10 @@
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = '#c060ff';
-    for (let r = 2; r <= 8; r += 3) {
+    ctx.lineWidth = 1.5;
+    for (let r = 3; r <= 12; r += 4) {
       ctx.beginPath();
-      ctx.arc(px, py, r + Math.sin(SF.time * 4 + r) * 1.5, SF.time * 2 + r, SF.time * 2 + r + 4.5);
+      ctx.arc(px, py, r + Math.sin(SF.time * 4 + r) * 2, SF.time * 2 + r, SF.time * 2 + r + 4.5);
       ctx.stroke();
     }
     ctx.restore();
@@ -142,33 +160,20 @@
 
   hyper.draw = function (ctx) {
     const s = SF.s;
-    ctx.fillStyle = '#050008';
-    ctx.fillRect(0, 0, 640, 400);
+    ctx.fillStyle = '#05000f';
+    ctx.fillRect(0, 0, SF.VW, SF.VH);
+    SF.gfx.nebula(ctx, 50, ['#2a1050', '#102a50', '#401040']);
+    SF.gfx.starfield(ctx, 21, s.hx * HSC, s.hy * HSC, 150, 0.18, '#33415a', 2);
+    SF.gfx.starfield(ctx, 22, s.hx * HSC, s.hy * HSC, 90, 0.45, '#6a7a9a', 2);
 
-    const scale = 10; // px per hyper unit, window 64x40 units
-    const ox = s.hx - 32, oy = s.hy - 20;
-    // background flux shimmer
-    const rng = SF.mulberry32(Math.floor(s.hx) * 73 + Math.floor(s.hy));
-    ctx.fillStyle = '#201030';
-    for (let i = 0; i < 40; i++) {
-      ctx.fillRect(SF.randInt(rng, 0, 639), SF.randInt(rng, 0, 399), 2, 2);
-    }
+    const ox = s.hx - SF.VW / HSC / 2, oy = s.hy - SF.VH / HSC / 2;
     for (const sys of SF.galaxy.systems) {
-      const px = (sys.x - ox) * scale, py = (sys.y - oy) * scale;
-      if (px < -20 || px > 660 || py < -20 || py > 420) continue;
-      ctx.fillStyle = sys.color;
-      ctx.beginPath();
-      ctx.arc(px, py, 5, 0, Math.PI * 2);
-      ctx.fill();
-      if (sys.flare) {
-        ctx.strokeStyle = '#ff4040';
-        ctx.beginPath();
-        ctx.arc(px, py, 8 + Math.sin(SF.time * 6) * 2, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.fillStyle = '#8090b0';
-      ctx.font = '11px monospace';
-      ctx.fillText(sys.name + ' (' + sys.x + ',' + sys.y + ')', px + 9, py + 4);
+      const px = (sys.x - ox) * HSC, py = (sys.y - oy) * HSC;
+      if (px < -40 || px > SF.VW + 40 || py < -40 || py > SF.VH + 40) continue;
+      SF.gfx.star(ctx, px, py, 8, sys.color, sys.flare);
+      ctx.fillStyle = '#8aa0c4';
+      ctx.font = '12px monospace';
+      ctx.fillText(sys.name + ' (' + sys.x + ',' + sys.y + ')', px + 14, py + 4);
     }
     // continuum fluxes: discovered ones show plainly; undiscovered ones
     // only shimmer if the science officer is sharp enough
@@ -176,29 +181,42 @@
     for (let i = 0; i < SF.galaxy.fluxes.length; i++) {
       const f = SF.galaxy.fluxes[i];
       for (const end of [{ x: f.ax, y: f.ay }, { x: f.bx, y: f.by }]) {
-        const px = (end.x - ox) * scale, py = (end.y - oy) * scale;
-        if (px < -20 || px > 660 || py < -20 || py > 420) continue;
+        const px = (end.x - ox) * HSC, py = (end.y - oy) * HSC;
+        if (px < -30 || px > SF.VW + 30 || py < -30 || py > SF.VH + 30) continue;
         const known = (s.fluxes || {})[i];
         if (known) {
           drawFluxSwirl(ctx, px, py, 0.9);
           ctx.fillStyle = '#c060ff';
-          ctx.font = '10px monospace';
-          ctx.fillText('flux ' + (i + 1), px + 11, py + 3);
+          ctx.font = '11px monospace';
+          ctx.fillText('flux ' + (i + 1), px + 16, py + 4);
         } else if (sciSkill >= 40) {
-          drawFluxSwirl(ctx, px, py, 0.25);
+          drawFluxSwirl(ctx, px, py, 0.22);
         }
       }
     }
-    drawShip(ctx, 320, 200, hyper.dir);
-    ctx.fillStyle = '#607090';
-    ctx.font = '12px monospace';
-    ctx.fillText('HYPERSPACE  ' + Math.round(s.hx) + ',' + Math.round(s.hy) +
-      '   region: ' + SF.data.RACES[SF.territoryRace(s.hx, s.hy)].name + ' space', 10, 390);
+    // autopilot course
+    if (s.course) {
+      const px = (s.course.x - ox) * HSC, py = (s.course.y - oy) * HSC;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(80,208,128,0.5)';
+      ctx.setLineDash([5, 7]);
+      ctx.beginPath();
+      ctx.moveTo(SF.VW / 2, SF.VH / 2);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      ctx.restore();
+      SF.gfx.crosshair(ctx, px, py, '#50d080', 'course');
+    }
+    SF.gfx.ship(ctx, SF.VW / 2, SF.VH / 2, hyper.dir, 1.7, '#c8d4ff', hyper.moving);
+    SF.gfx.hudBar(ctx, 'HYPERSPACE  ' + Math.round(s.hx) + ',' + Math.round(s.hy) +
+      '   region: ' + SF.data.RACES[SF.territoryRace(s.hx, s.hy)].name + ' space' +
+      (s.course ? '   autopilot -> ' + Math.round(s.course.x) + ',' + Math.round(s.course.y) : '   click to set course'));
   };
 
   // --------------------------------------------------------------- system
   const sysMode = {};
   SF.modes.system = sysMode;
+  const SSC = 2.8, SCX = SF.VW / 2, SCY = SF.VH / 2;
 
   function planetPos(p) {
     return { x: Math.cos(p.angle) * p.orbit, y: Math.sin(p.angle) * p.orbit };
@@ -209,6 +227,8 @@
     sysMode.sys = sys;
     sysMode.grace = 2.0;
     sysMode.dir = Math.PI / 2;
+    sysMode.target = null;
+    sysMode.moving = false;
     SF.s.visited[sys.id] = true;
     const sysMenu = [
       { key: 'M', label: 'Galaxy starmap', fn: function () {
@@ -237,6 +257,21 @@
     }
   };
 
+  sysMode.click = function (px, py) {
+    let lx = (px - SCX) / SSC, ly = (py - SCY) / SSC;
+    // snap to a planet
+    for (const p of sysMode.sys.planets) {
+      const pos = planetPos(p);
+      const ppx = SCX + pos.x * SSC, ppy = SCY + pos.y * SSC;
+      if (Math.hypot(ppx - px, ppy - py) < 8 + p.size * 1.6) {
+        sysMode.target = { x: pos.x, y: pos.y, label: p.name };
+        SF.ui.log('Helm: making for ' + p.name + '.', 'good');
+        return;
+      }
+    }
+    sysMode.target = { x: lx, y: ly };
+  };
+
   sysMode.update = function (dt) {
     const s = SF.s;
     sysMode.grace = Math.max(0, sysMode.grace - dt);
@@ -246,8 +281,18 @@
       SF.setMode('encounter', { raceId: 'uhlek', from: 'system' });
       return;
     }
-    const v = moveVector();
-    if (!v.dx && !v.dy) return;
+    let v = moveVector();
+    if (v.dx || v.dy) {
+      sysMode.target = null;
+    } else if (sysMode.target) {
+      const dx = sysMode.target.x - sysMode.sx, dy = sysMode.target.y - sysMode.sy;
+      const d = Math.hypot(dx, dy);
+      if (d < 0.6) sysMode.target = null;
+      else v = { dx: dx / d, dy: dy / d };
+    }
+    sysMode.moving = !!(v.dx || v.dy);
+    if (!sysMode.moving) return;
+
     const speed = 26 + s.ship.engine * 4;
     const dist = speed * dt;
     sysMode.sx += v.dx * dist;
@@ -261,6 +306,7 @@
     if (Math.hypot(sysMode.sx, sysMode.sy) < 8) {
       s.ship.hull -= 12;
       sysMode.sx *= 2.5; sysMode.sy *= 2.5;
+      sysMode.target = null;
       SF.ui.log('Stellar corona! Hull scorched (-12). Pulling away.', 'bad');
       if (s.ship.hull <= 0) { SF.setMode('gameover', { reason: 'Your ship burned in the corona of ' + sysMode.sys.name + '.' }); return; }
     }
@@ -291,44 +337,38 @@
 
   sysMode.draw = function (ctx) {
     const sys = sysMode.sys;
-    ctx.fillStyle = '#000008';
-    ctx.fillRect(0, 0, 640, 400);
-    const rng = SF.mulberry32(sys.seedBg || (sys.seedBg = Math.floor(sys.x * 1000 + sys.y)));
-    ctx.fillStyle = '#303848';
-    for (let i = 0; i < 70; i++) ctx.fillRect(SF.randInt(rng, 0, 639), SF.randInt(rng, 0, 399), 1, 1);
+    ctx.fillStyle = '#020210';
+    ctx.fillRect(0, 0, SF.VW, SF.VH);
+    SF.gfx.nebula(ctx, sys.x * 31 + sys.y, ['#1a1040', '#0a2040', '#301030']);
+    SF.gfx.starfield(ctx, sys.x * 7 + sys.y, sysMode.sx * SSC, sysMode.sy * SSC, 120, 0.1, '#404c64', 2);
 
-    const cx = 320, cy = 200, sc = 1.9;
-    // star
-    const flicker = sys.flare ? Math.sin(SF.time * 8) * 3 : 0;
-    ctx.fillStyle = sys.color;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 13 + flicker, 0, Math.PI * 2);
-    ctx.fill();
-    if (sys.flare) {
-      ctx.strokeStyle = '#ff5030';
+    // orbit rings
+    ctx.strokeStyle = 'rgba(80,120,180,0.16)';
+    for (const p of sys.planets) {
       ctx.beginPath();
-      ctx.arc(cx, cy, 20 + flicker * 2, 0, Math.PI * 2);
+      ctx.arc(SCX, SCY, p.orbit * SSC, 0, Math.PI * 2);
       ctx.stroke();
     }
-    // planets
-    for (const p of sysMode.sys.planets) {
-      ctx.strokeStyle = '#182030';
-      ctx.beginPath();
-      ctx.arc(cx, cy, p.orbit * sc, 0, Math.PI * 2);
-      ctx.stroke();
+    SF.gfx.star(ctx, SCX, SCY, 26, sys.color, sys.flare);
+    for (const p of sys.planets) {
       const pos = planetPos(p);
-      const px = cx + pos.x * sc, py = cy + pos.y * sc;
-      ctx.fillStyle = SF.data.PLANET_TYPES[p.type].colors[2];
-      ctx.beginPath();
-      ctx.arc(px, py, 2 + p.size * 0.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#708090';
-      ctx.font = '10px monospace';
-      ctx.fillText(p.name + (p.special === 'starport' ? ' [STARPORT]' : ''), px + 8, py + 3);
+      const px = SCX + pos.x * SSC, py = SCY + pos.y * SSC;
+      const type = SF.data.PLANET_TYPES[p.type];
+      const r = 5 + p.size * 1.4;
+      SF.gfx.planetSphere(ctx, px, py, r, type.colors, p.seed, {
+        bands: p.type === 'gas',
+        ring: p.type === 'gas' && p.size >= 7,
+        atmo: (p.type === 'ocean' || p.type === 'jungle') ? 'rgba(120,200,255,0.45)' : null,
+      });
+      ctx.fillStyle = p.special === 'starport' ? '#40e0d0' : '#7e93b4';
+      ctx.font = '11px monospace';
+      ctx.fillText(p.name + (p.special === 'starport' ? ' [STARPORT]' : ''), px + r + 5, py + 4);
     }
-    drawShip(ctx, cx + sysMode.sx * sc, cy + sysMode.sy * sc, sysMode.dir);
-    ctx.fillStyle = '#607090';
-    ctx.font = '12px monospace';
-    ctx.fillText(sys.name.toUpperCase() + ' SYSTEM — fly to a planet to orbit, fly out to leave', 10, 390);
+    if (sysMode.target) {
+      const px = SCX + sysMode.target.x * SSC, py = SCY + sysMode.target.y * SSC;
+      SF.gfx.crosshair(ctx, px, py, '#50d080', sysMode.target.label || null);
+    }
+    SF.gfx.ship(ctx, SCX + sysMode.sx * SSC, SCY + sysMode.sy * SSC, sysMode.dir, 1.5, '#c8d4ff', sysMode.moving);
+    SF.gfx.hudBar(ctx, sys.name.toUpperCase() + ' SYSTEM — click a planet to fly there; fly past the edge to leave');
   };
 })();

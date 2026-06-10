@@ -79,15 +79,12 @@ SF.ui.setStatus = function () {
   const el = document.getElementById('status');
   el.textContent = '';
   if (!s) return;
-  const rows = [
+  const textRows = [
     ['DATE', SF.dateString(s)],
     ['CREDITS', SF.ui.fmt(s.credits) + ' cr'],
-    ['FUEL', s.ship.fuel.toFixed(1) + ' / ' + SF.fuelMax(s)],
-    ['HULL', Math.ceil(s.ship.hull) + ' / ' + s.ship.hullMax],
-    ['CARGO', SF.cargoUsed(s) + ' / ' + SF.cargoMax(s) + ' cu'],
-    ['POS', Math.round(s.hx) + ',' + Math.round(s.hy)],
+    ['POSITION', Math.round(s.hx) + ',' + Math.round(s.hy)],
   ];
-  rows.forEach(function (r) {
+  textRows.forEach(function (r) {
     const row = document.createElement('div');
     row.className = 'srow';
     const lbl = document.createElement('span');
@@ -97,6 +94,33 @@ SF.ui.setStatus = function () {
     val.textContent = r[1];
     row.appendChild(lbl);
     row.appendChild(val);
+    el.appendChild(row);
+  });
+  const bars = [
+    ['FUEL', s.ship.fuel / SF.fuelMax(s), '#50d080', s.ship.fuel.toFixed(1) + ' / ' + SF.fuelMax(s)],
+    ['HULL', s.ship.hull / s.ship.hullMax, '#40a0e8', Math.ceil(s.ship.hull) + ' / ' + s.ship.hullMax],
+    ['CARGO', SF.cargoUsed(s) / SF.cargoMax(s), '#d0b040', SF.cargoUsed(s) + ' / ' + SF.cargoMax(s) + ' cu'],
+  ];
+  bars.forEach(function (b) {
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    const lblRow = document.createElement('div');
+    lblRow.className = 'bar-lbl';
+    const lbl = document.createElement('span');
+    lbl.textContent = b[0];
+    const val = document.createElement('span');
+    val.textContent = b[3];
+    lblRow.appendChild(lbl);
+    lblRow.appendChild(val);
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const fill = document.createElement('div');
+    fill.className = 'fill';
+    fill.style.width = Math.max(0, Math.min(100, b[1] * 100)) + '%';
+    fill.style.background = b[2];
+    bar.appendChild(fill);
+    row.appendChild(lblRow);
+    row.appendChild(bar);
     el.appendChild(row);
   });
 };

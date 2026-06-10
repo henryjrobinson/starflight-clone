@@ -8,10 +8,20 @@ const path = require('path');
 const vm = require('vm');
 
 // ------------------------------------------------------------- DOM stubs
+// "magic" object: any method call returns another magic object, so chains
+// like createRadialGradient(...).addColorStop(...) are safe no-ops.
+const magic = new Proxy(function () {}, {
+  get(t, k) {
+    if (k === 'width') return 0;
+    return function () { return magic; };
+  },
+  set() { return true; },
+  apply() { return magic; },
+});
 const ctx2d = new Proxy({}, {
   get(t, k) {
     if (k in t) return t[k];
-    return function () { return { width: 0 }; };
+    return function () { return magic; };
   },
   set(t, k, v) { t[k] = v; return true; },
 });
@@ -53,7 +63,7 @@ sandbox.window = sandbox;
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 
-const files = ['rng.js', 'data.js', 'galaxy.js', 'state.js', 'ui.js',
+const files = ['rng.js', 'gfx.js', 'data.js', 'galaxy.js', 'state.js', 'ui.js',
   'starport.js', 'space.js', 'starmap.js', 'planet.js', 'encounter.js', 'main.js'];
 for (const f of files) {
   const src = fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8');
@@ -274,6 +284,26 @@ check('starmap opens from hyperspace', SF.modeName === 'starmap');
 SF.tick(0.05); // exercise the draw path
 clickMenu('Close starmap');
 check('starmap returns to hyperspace', SF.modeName === 'hyper');
+
+console.log('== mouse autopilot ==');
+SF.modes.hyper.click(SF.VW / 2 + 130, SF.VH / 2);
+check('viewport click lays in a course', !!s.course);
+{
+  const startX = s.hx;
+  for (let i = 0; i < 50 && s.course; i++) {
+    if (SF.modeName === 'encounter') { resolveEncounterPeacefully(); continue; }
+    if (SF.modeName !== 'hyper') break;
+    SF.tick(0.05);
+  }
+  check('autopilot flies the course', s.hx !== startX || !s.course);
+}
+s.course = null;
+SF.setMode('starmap', { back: { mode: 'hyper' } });
+SF.modes.starmap.click(150 + 100 * 2.7, 16 + 100 * 2.7); // world ~100,100
+check('starmap click lays in a course', !!s.course && Math.abs(s.course.x - 100) < 6);
+clickMenu('Clear course');
+check('clear course works', !s.course);
+clickMenu('Close starmap');
 
 console.log('== find ruins, get the tablet ==');
 let ruinTarget = null;

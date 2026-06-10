@@ -18,35 +18,83 @@ SF.modes = SF.modes || {};
   port.update = function () {};
 
   port.draw = function (ctx) {
-    ctx.fillStyle = '#000010';
-    ctx.fillRect(0, 0, 640, 400);
-    // simple starport skyline
-    ctx.fillStyle = '#101830';
-    ctx.fillRect(0, 280, 640, 120);
+    // dusk sky over the port
+    const sky = ctx.createLinearGradient(0, 0, 0, SF.VH);
+    sky.addColorStop(0, '#020210');
+    sky.addColorStop(0.55, '#0c1430');
+    sky.addColorStop(0.8, '#262048');
+    sky.addColorStop(1, '#0a0a18');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, SF.VW, SF.VH);
     const rng = SF.mulberry32(7);
-    for (let i = 0; i < 18; i++) {
-      const w = SF.randInt(rng, 24, 70);
-      const h = SF.randInt(rng, 40, 170);
-      const x = SF.randInt(rng, 0, 610);
-      ctx.fillStyle = '#182848';
-      ctx.fillRect(x, 280 - h, w, h + 120);
+    SF.gfx.starfield(ctx, 8, 0, 0, 130, 0, '#8896b8', 2);
+    // Arth's moon hangs low
+    SF.gfx.planetSphere(ctx, 790, 110, 56, ['#283048', '#5868a0', '#90a0d0', '#e0e8f8'], 31, {});
+
+    // far skyline silhouette
+    ctx.fillStyle = '#0c1428';
+    for (let i = 0; i < 26; i++) {
+      const w = SF.randInt(rng, 28, 80);
+      const h = SF.randInt(rng, 60, 200);
+      ctx.fillRect(SF.randInt(rng, 0, SF.VW - 40), 420 - h, w, h + 60);
+    }
+    // near towers with lit windows
+    for (let i = 0; i < 16; i++) {
+      const w = SF.randInt(rng, 40, 100);
+      const h = SF.randInt(rng, 90, 260);
+      const x = SF.randInt(rng, 0, SF.VW - 60);
+      const tower = ctx.createLinearGradient(x, 0, x + w, 0);
+      tower.addColorStop(0, '#1a2a4e');
+      tower.addColorStop(0.5, '#24365e');
+      tower.addColorStop(1, '#101e3a');
+      ctx.fillStyle = tower;
+      ctx.fillRect(x, 460 - h, w, h + 60);
       ctx.fillStyle = '#f0d040';
-      for (let wy = 280 - h + 8; wy < 270; wy += 14) {
-        for (let wx = x + 4; wx < x + w - 6; wx += 10) {
-          if (SF.chance(rng, 0.4)) ctx.fillRect(wx, wy, 4, 6);
+      for (let wy = 460 - h + 10; wy < 440; wy += 16) {
+        for (let wx = x + 6; wx < x + w - 8; wx += 12) {
+          if (SF.chance(rng, 0.4)) {
+            ctx.globalAlpha = 0.5 + rng() * 0.5;
+            ctx.fillRect(wx, wy, 5, 7);
+          }
         }
       }
+      ctx.globalAlpha = 1;
+      // blinking beacon on the tallest towers
+      if (h > 200) {
+        ctx.fillStyle = (Math.sin(SF.time * 3 + i) > 0.4) ? '#ff5050' : '#401418';
+        ctx.beginPath();
+        ctx.arc(x + w / 2, 456 - h, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
-    for (let i = 0; i < 60; i++) {
-      ctx.fillStyle = SF.chance(rng, 0.3) ? '#fff' : '#889';
-      ctx.fillRect(SF.randInt(rng, 0, 639), SF.randInt(rng, 0, 240), 2, 2);
-    }
+    // landing apron with your ship on a lit pad
+    const ground = ctx.createLinearGradient(0, 480, 0, SF.VH);
+    ground.addColorStop(0, '#1a2236');
+    ground.addColorStop(1, '#080a14');
+    ctx.fillStyle = ground;
+    ctx.fillRect(0, 480, SF.VW, SF.VH - 480);
+    const padGlow = ctx.createRadialGradient(250, 540, 8, 250, 540, 110);
+    padGlow.addColorStop(0, 'rgba(64,224,208,0.25)');
+    padGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = padGlow;
+    ctx.beginPath();
+    ctx.ellipse(250, 540, 130, 36, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#2a6a6a';
+    ctx.beginPath();
+    ctx.ellipse(250, 540, 100, 24, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    SF.gfx.ship(ctx, 250, 516, -Math.PI / 2, 3.4, '#c8d4ff', false);
+
     ctx.fillStyle = '#40e0d0';
-    ctx.font = 'bold 22px monospace';
-    ctx.fillText('STARPORT  ARTH', 220, 40);
-    ctx.font = '13px monospace';
-    ctx.fillStyle = '#9ab';
-    ctx.fillText('Interstel Operations — Sector Command', 195, 62);
+    ctx.font = 'bold 30px monospace';
+    ctx.shadowColor = '#40e0d0';
+    ctx.shadowBlur = 14;
+    ctx.fillText('STARPORT  ARTH', 340, 52);
+    ctx.shadowBlur = 0;
+    ctx.font = '14px monospace';
+    ctx.fillStyle = '#8aa0bc';
+    ctx.fillText('Interstel Operations — Sector Command', 350, 76);
   };
 
   function rootMenu() {

@@ -13,11 +13,18 @@ cd starflight-clone
 python3 -m http.server 8080   # then visit http://localhost:8080
 ```
 
-**Controls**
+**Controls — keyboard or mouse throughout**
 
 - Arrow keys / WASD — fly the ship (hyperspace, star systems) and drive the terrain vehicle
-- Bracketed letters (e.g. `[L]`) — menu hotkeys; arrow keys + Enter also work in list menus; clicking works too
-- `M` — galaxy map (in hyperspace)
+- **Mouse**: click anywhere in space to fly there; click a planet to make for it;
+  click the starmap to lay in a course the autopilot flies; click terrain to
+  drive the TV; click menu buttons. Arrow keys disengage the autopilot.
+- Bracketed letters (e.g. `[L]`) — menu hotkeys; arrow keys + Enter also work in list menus
+- `M` — galaxy starmap (anywhere)
+
+**Graphics**: 960×600 canvas, everything drawn procedurally — gradient-shaded
+planets with atmospheres and gas-giant rings, glowing stars, parallax
+starfields, nebulae, ship sprites with engine glow. No image assets.
 
 ## The game
 

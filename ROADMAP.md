@@ -22,8 +22,12 @@ Status legend: ✅ done · ⏳ in progress · ❌ not started
 ### Now
 
 - ❌ Post launch drafts (Henry, manually — drafts in `social/`)
-- ⏳ Feature on GitHub: repo topics + pin to profile (in progress this
-  session), social preview image (needs a screenshot or generated banner)
+- ✅ GitHub repo topics added (game, retro-gaming, space, javascript, canvas,
+  starflight, claude-code, ai-assisted)
+- ❌ Pin repo to GitHub profile (manual — GitHub has no API for profile pins:
+  github.com/henryjrobinson → "Customize your pins")
+- ❌ Social preview image (repo Settings → Social preview; needs a screenshot
+  or generated banner)
 - ❌ README hero screenshot: capture title screen + a planet surface + the
   starmap; embed at the top of README.md
 

@@ -108,7 +108,16 @@ function flyHyperTo(tx, ty, label, targetSysId) {
       continue;
     }
     const s = SF.s;
-    if (Math.hypot(s.hx - tx, s.hy - ty) < 1.5) break;
+    if (Math.hypot(s.hx - tx, s.hy - ty) < 1.5) {
+      if (!targetSysId) break;
+      // on top of the system but the entry cooldown is still running —
+      // keep wiggling (entry only checks while moving) until it fires
+      SF.keys.ArrowRight = guard % 2 === 0;
+      SF.keys.ArrowLeft = guard % 2 === 1;
+      SF.keys.ArrowUp = SF.keys.ArrowDown = false;
+      SF.tick(0.05);
+      continue;
+    }
     SF.s.ship.fuel = Math.max(SF.s.ship.fuel, 30); // smoke test refuels magically
     const dx = tx - s.hx, dy = ty - s.hy;
     SF.keys.ArrowRight = dx > 1; SF.keys.ArrowLeft = dx < -1;
@@ -118,16 +127,36 @@ function flyHyperTo(tx, ty, label, targetSysId) {
   SF.keys.ArrowRight = SF.keys.ArrowLeft = SF.keys.ArrowDown = SF.keys.ArrowUp = false;
   if (guard >= 3000) throw new Error('hyper flight to ' + label + ' did not converge (mode=' + SF.modeName + ')');
 }
+function segDistToOrigin(ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy || 1;
+  let t = -(ax * dx + ay * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(ax + t * dx, ay + t * dy);
+}
 function flySystemTo(getTarget, doneWhen, label) {
   let guard = 0;
-  while (!doneWhen() && guard++ < 800) {
+  while (!doneWhen() && guard++ < 3000) {
     if (SF.modeName === 'encounter') { resolveEncounterPeacefully(); continue; }
     if (SF.modeName !== 'system') break;
+    SF.s.ship.hull = SF.s.ship.hullMax; // autopilot isn't a balance test
     const sm = SF.modes.system;
-    const t = getTarget();
+    let t = getTarget();
+    // steer wide of the star: if the direct line grazes the scorch zone,
+    // route via a perpendicular waypoint instead
+    const distToTarget = Math.hypot(t.x - sm.sx, t.y - sm.sy);
+    if (distToTarget > 25 && segDistToOrigin(sm.sx, sm.sy, t.x, t.y) < 14) {
+      const side = (sm.sx * t.y - sm.sy * t.x) >= 0 ? 1 : -1;
+      const ang = Math.atan2(sm.sy, sm.sx) + side * 1.2;
+      t = { x: Math.cos(ang) * 35, y: Math.sin(ang) * 35 };
+    }
     const dx = t.x - sm.sx, dy = t.y - sm.sy;
     SF.keys.ArrowRight = dx > 0.5; SF.keys.ArrowLeft = dx < -0.5;
     SF.keys.ArrowDown = dy > 0.5; SF.keys.ArrowUp = dy < -0.5;
+    // never park: orbit entry only triggers while the ship is moving
+    if (!SF.keys.ArrowRight && !SF.keys.ArrowLeft && !SF.keys.ArrowUp && !SF.keys.ArrowDown) {
+      SF.keys[guard % 2 ? 'ArrowRight' : 'ArrowLeft'] = true;
+    }
     SF.tick(0.05);
   }
   SF.keys.ArrowRight = SF.keys.ArrowLeft = SF.keys.ArrowDown = SF.keys.ArrowUp = false;
@@ -216,6 +245,28 @@ const fuelBefore = s.ship.fuel;
 holdKey('ArrowRight', 1);
 if (SF.modeName === 'encounter') resolveEncounterPeacefully();
 check('hyper travel burns fuel', s.ship.fuel < fuelBefore);
+
+console.log('== continuum fluxes ==');
+check('7 flux pairs generated', SF.galaxy.fluxes.length === 7);
+check('flux endpoints in bounds and worth taking (>=70 apart)', SF.galaxy.fluxes.every(f =>
+  f.ax >= 0 && f.ax <= 250 && f.ay >= 0 && f.ay <= 200 &&
+  f.bx >= 0 && f.bx <= 250 && f.by >= 0 && f.by <= 200 &&
+  Math.hypot(f.ax - f.bx, f.ay - f.by) >= 70));
+{
+  const f0 = SF.galaxy.fluxes[0];
+  const fuelAtFlux = (function () {
+    SF.modes.hyper.cooldown = 0;
+    s.hx = f0.ax - 1.0; s.hy = f0.ay;
+    const fuel = s.ship.fuel;
+    SF.keys.ArrowRight = true;
+    for (let i = 0; i < 10 && Math.hypot(s.hx - f0.bx, s.hy - f0.by) > 5; i++) SF.tick(0.05);
+    SF.keys.ArrowRight = false;
+    return fuel;
+  })();
+  check('flux transit teleports to partner end', Math.hypot(s.hx - f0.bx, s.hy - f0.by) < 5);
+  check('flux discovered and charted', s.fluxes && s.fluxes[0] === true);
+  check('flux transit is nearly free', fuelAtFlux - s.ship.fuel < 0.2);
+}
 
 console.log('== starmap ==');
 clickMenu('Galaxy starmap');

@@ -95,6 +95,7 @@
           SF.setMode('system', { sysId: near.id, fromHyper: true });
           return;
         }
+        if (enterFlux(s)) return;
       }
       const race = SF.territoryRace(s.hx, s.hy);
       if (rollEncounter(SF.data.RACES[race].freq / 6, dt)) {
@@ -102,6 +103,42 @@
       }
     }
   };
+
+  // Fly into a flux endpoint -> instant free transit to its partner.
+  function enterFlux(s) {
+    for (let i = 0; i < SF.galaxy.fluxes.length; i++) {
+      const f = SF.galaxy.fluxes[i];
+      let exit = null;
+      if (Math.hypot(f.ax - s.hx, f.ay - s.hy) < 2.2) exit = { x: f.bx, y: f.by };
+      else if (Math.hypot(f.bx - s.hx, f.by - s.hy) < 2.2) exit = { x: f.ax, y: f.ay };
+      if (!exit) continue;
+      s.fluxes = s.fluxes || {};
+      if (!s.fluxes[i]) {
+        s.fluxes[i] = true;
+        SF.ui.log('CONTINUUM FLUX DISCOVERED — charted on the starmap.', 'good');
+      }
+      s.hx = exit.x;
+      s.hy = exit.y;
+      hyper.cooldown = 2.5;
+      SF.ui.log('Space folds around the ship... you emerge at ' +
+        Math.round(s.hx) + ',' + Math.round(s.hy) + '. No fuel spent.', 'hdr');
+      SF.ui.setStatus();
+      return true;
+    }
+    return false;
+  }
+
+  function drawFluxSwirl(ctx, px, py, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#c060ff';
+    for (let r = 2; r <= 8; r += 3) {
+      ctx.beginPath();
+      ctx.arc(px, py, r + Math.sin(SF.time * 4 + r) * 1.5, SF.time * 2 + r, SF.time * 2 + r + 4.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
 
   hyper.draw = function (ctx) {
     const s = SF.s;
@@ -132,6 +169,25 @@
       ctx.fillStyle = '#8090b0';
       ctx.font = '11px monospace';
       ctx.fillText(sys.name + ' (' + sys.x + ',' + sys.y + ')', px + 9, py + 4);
+    }
+    // continuum fluxes: discovered ones show plainly; undiscovered ones
+    // only shimmer if the science officer is sharp enough
+    const sciSkill = SF.skill(s, 'science');
+    for (let i = 0; i < SF.galaxy.fluxes.length; i++) {
+      const f = SF.galaxy.fluxes[i];
+      for (const end of [{ x: f.ax, y: f.ay }, { x: f.bx, y: f.by }]) {
+        const px = (end.x - ox) * scale, py = (end.y - oy) * scale;
+        if (px < -20 || px > 660 || py < -20 || py > 420) continue;
+        const known = (s.fluxes || {})[i];
+        if (known) {
+          drawFluxSwirl(ctx, px, py, 0.9);
+          ctx.fillStyle = '#c060ff';
+          ctx.font = '10px monospace';
+          ctx.fillText('flux ' + (i + 1), px + 11, py + 3);
+        } else if (sciSkill >= 40) {
+          drawFluxSwirl(ctx, px, py, 0.25);
+        }
+      }
     }
     drawShip(ctx, 320, 200, hyper.dir);
     ctx.fillStyle = '#607090';

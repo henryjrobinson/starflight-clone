@@ -33,6 +33,7 @@ SF.newState = function () {
     hx: 125, hy: 100,            // hyperspace position
     flags: { rel: {} },          // story flags + race relations
     visited: { arth: true },     // systems seen on the map
+    fluxes: {},                  // discovered continuum fluxes (by index)
     kills: 0,
     earnings: 0,
   };

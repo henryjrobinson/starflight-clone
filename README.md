@@ -48,6 +48,12 @@ Figure out why the stars are dying — and turn a profit on the way.
   One doesn't respond at all.
 - Turn-based ship combat with range envelopes (lasers ≤60, missiles ≤150),
   fleeing, surrenders, salvage, and races that *remember* unprovoked attacks
+- **Continuum fluxes** — 7 hidden wormhole pairs in hyperspace. Fly into one
+  and space folds: instant, fuel-free transit to its partner. Invisible until
+  discovered (a science officer at 40+ skill can spot the shimmer);
+  discovered fluxes are charted on the starmap as numbered F# pairs
+- A full-screen **galaxy starmap** (`M` anywhere) with coordinate grid, race
+  territories, charted systems, flare warnings, and story markers
 - Run out of fuel and engineering will crack raw Endurium from your cargo —
   or an Interstel tug hauls you home for 25% of your credits
 
@@ -76,4 +82,4 @@ as fuel, the dying-suns mystery.
 
 Simplified: combat is menu-turn-based rather than real-time; one ship per
 encounter; the story is a 3-artifact chain rather than the full plot; no
-planet recommendation/colonization mechanic; no continuum flux network.
+planet recommendation/colonization mechanic.

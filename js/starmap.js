@@ -84,6 +84,27 @@
       }
     }
 
+    // discovered continuum fluxes: matching numbers joined by a faint thread
+    for (let i = 0; i < SF.galaxy.fluxes.length; i++) {
+      if (!(s.fluxes || {})[i]) continue;
+      const f = SF.galaxy.fluxes[i];
+      ctx.strokeStyle = '#c060ff';
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath();
+      ctx.moveTo(mx(f.ax), my(f.ay));
+      ctx.lineTo(mx(f.bx), my(f.by));
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#c060ff';
+      ctx.font = '10px monospace';
+      for (const end of [{ x: f.ax, y: f.ay }, { x: f.bx, y: f.by }]) {
+        ctx.beginPath();
+        ctx.arc(mx(end.x), my(end.y), 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillText('F' + (i + 1), mx(end.x) + 5, my(end.y) - 4);
+      }
+    }
+
     // story markers
     marker(ctx, 125, 100, '#40e0d0', 'ARTH (HOME)');
     if (s.flags.eggCoords && !s.flags.egg) marker(ctx, 199, 33, '#f0d040', 'EGG 199,33');
@@ -102,8 +123,10 @@
     const charted = SF.galaxy.systems.filter(sys => s.visited[sys.id]).length;
     ctx.fillStyle = '#607090';
     ctx.font = '12px monospace';
+    const fluxCount = Object.keys(s.fluxes || {}).length;
     ctx.fillText('GALAXY STARMAP — ' + charted + '/' + SF.galaxy.systems.length +
-      ' systems charted.  Red ring = flaring sun.  [M] to close.', 10, 394);
+      ' systems, ' + fluxCount + '/' + SF.galaxy.fluxes.length +
+      ' fluxes charted.  Red ring = flare. F# = flux pair.  [M] to close.', 10, 394);
   };
 
   function marker(ctx, x, y, color, label) {

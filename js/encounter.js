@@ -154,7 +154,7 @@
 
   function fireLaser() {
     const s = SF.s;
-    if (enc.range > 60) { SF.ui.log('Out of laser range (60). Close the distance.', 'warn'); return; }
+    if (Math.round(enc.range) > 60) { SF.ui.log('Out of laser range (60). Close the distance.', 'warn'); return; }
     markAggression();
     if (Math.random() < 0.8) {
       const dmg = playerDamage(3 + s.ship.laser * 3 + SF.skill(s, 'engineering') / 20);
@@ -168,7 +168,7 @@
 
   function fireMissile() {
     const s = SF.s;
-    if (enc.range > 150) { SF.ui.log('Out of missile range (150).', 'warn'); return; }
+    if (Math.round(enc.range) > 150) { SF.ui.log('Out of missile range (150).', 'warn'); return; }
     markAggression();
     if (Math.random() < 0.6) {
       const dmg = playerDamage(14 * s.ship.missile);

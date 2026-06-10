@@ -109,7 +109,24 @@ SF.HYPER_H = 200;
       if (cand) { cand.ruins = true; break; }
     }
 
+    // Continuum fluxes: hidden wormhole pairs. Fly into one end, pop out
+    // the other — free, instant, and uncharted until you find them.
+    const fluxes = [];
+    let fluxAttempts = 0;
+    while (fluxes.length < 7 && fluxAttempts < 4000) {
+      fluxAttempts++;
+      const ax = SF.randInt(rng, 15, SF.HYPER_W - 15), ay = SF.randInt(rng, 15, SF.HYPER_H - 15);
+      const bx = SF.randInt(rng, 15, SF.HYPER_W - 15), by = SF.randInt(rng, 15, SF.HYPER_H - 15);
+      if (Math.hypot(ax - bx, ay - by) < 70) continue; // worth taking
+      if (systems.some(s => Math.hypot(s.x - ax, s.y - ay) < 8 || Math.hypot(s.x - bx, s.y - by) < 8)) continue;
+      if (fluxes.some(f =>
+        Math.hypot(f.ax - ax, f.ay - ay) < 12 || Math.hypot(f.bx - bx, f.by - by) < 12 ||
+        Math.hypot(f.ax - bx, f.ay - by) < 12 || Math.hypot(f.bx - ax, f.by - ay) < 12)) continue;
+      fluxes.push({ ax: ax, ay: ay, bx: bx, by: by });
+    }
+
     SF.galaxy.systems = systems;
+    SF.galaxy.fluxes = fluxes;
     SF.galaxy.byId = {};
     systems.forEach(s => { SF.galaxy.byId[s.id] = s; });
   };

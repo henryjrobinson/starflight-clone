@@ -60,17 +60,18 @@
   }
 
   // ---------------------------------------------------------------- hyper
-  const hyper = { mapOpen: false };
+  const hyper = {};
   SF.modes.hyper = hyper;
 
   hyper.enter = function () {
-    hyper.mapOpen = false;
     hyper.dir = 0;
     hyper.cooldown = 1.5;  // don't instantly re-enter the system we just left
     SF.ui.setMenu('HYPERSPACE', [
-      { key: 'M', label: 'Toggle galaxy map', fn: function () { hyper.mapOpen = !hyper.mapOpen; } },
+      { key: 'M', label: 'Galaxy starmap', fn: function () {
+        SF.setMode('starmap', { back: { mode: 'hyper' } });
+      } },
     ], { nav: false });
-    SF.ui.log('Entering hyperspace. Arrow keys to fly. [M] for the star map.');
+    SF.ui.log('Entering hyperspace. Arrow keys to fly. [M] for the starmap.');
   };
 
   hyper.update = function (dt) {
@@ -106,7 +107,6 @@
     const s = SF.s;
     ctx.fillStyle = '#050008';
     ctx.fillRect(0, 0, 640, 400);
-    if (hyper.mapOpen) { drawMap(ctx); return; }
 
     const scale = 10; // px per hyper unit, window 64x40 units
     const ox = s.hx - 32, oy = s.hy - 20;
@@ -140,40 +140,6 @@
       '   region: ' + SF.data.RACES[SF.territoryRace(s.hx, s.hy)].name + ' space', 10, 390);
   };
 
-  function drawMap(ctx) {
-    const s = SF.s;
-    const sc = 2.4, mx = 50, my = 30;
-    ctx.strokeStyle = '#304060';
-    ctx.strokeRect(mx, my, SF.HYPER_W * sc, SF.HYPER_H * sc * 0.7);
-    for (const sys of SF.galaxy.systems) {
-      const px = mx + sys.x * sc, py = my + sys.y * sc * 0.7;
-      ctx.fillStyle = s.visited[sys.id] ? sys.color : '#404858';
-      ctx.fillRect(px - 2, py - 2, 4, 4);
-      if (s.visited[sys.id]) {
-        ctx.fillStyle = '#607090';
-        ctx.font = '9px monospace';
-        ctx.fillText(sys.name, px + 4, py + 3);
-      }
-    }
-    if (s.flags.eggCoords) mark(ctx, mx + 199 * sc, my + 33 * sc * 0.7, '#f0d040', 'EGG 199,33');
-    if (s.flags.crystalCoords) mark(ctx, mx + 42 * sc, my + 178 * sc * 0.7, '#60e0e0', 'CRYSTAL 42,178');
-    ctx.fillStyle = '#fff';
-    const px = mx + s.hx * sc, py = my + s.hy * sc * 0.7;
-    ctx.fillRect(px - 1, py - 4, 2, 8);
-    ctx.fillRect(px - 4, py - 1, 8, 2);
-    ctx.fillStyle = '#607090';
-    ctx.font = '12px monospace';
-    ctx.fillText('GALAXY MAP — [M] to close. Cross marks your ship.', 10, 390);
-  }
-
-  function mark(ctx, px, py, color, label) {
-    ctx.strokeStyle = color;
-    ctx.strokeRect(px - 5, py - 5, 10, 10);
-    ctx.fillStyle = color;
-    ctx.font = '10px monospace';
-    ctx.fillText(label, px + 8, py + 4);
-  }
-
   // --------------------------------------------------------------- system
   const sysMode = {};
   SF.modes.system = sysMode;
@@ -188,9 +154,14 @@
     sysMode.grace = 2.0;
     sysMode.dir = Math.PI / 2;
     SF.s.visited[sys.id] = true;
+    const sysMenu = [
+      { key: 'M', label: 'Galaxy starmap', fn: function () {
+        SF.setMode('starmap', { back: { mode: 'system', sysId: sys.id } });
+      } },
+    ];
     if (opts.resume) {
-      // back from an encounter — keep position, don't re-trigger the ambush
-      SF.ui.setMenu(sys.name.toUpperCase() + ' SYSTEM', [], { nav: false });
+      // back from an encounter/starmap — keep position, no ambush re-trigger
+      SF.ui.setMenu(sys.name.toUpperCase() + ' SYSTEM', sysMenu, { nav: false });
       return;
     }
     if (opts.fromPlanetSlot !== undefined) {
@@ -201,7 +172,7 @@
       sysMode.sx = 0;
       sysMode.sy = -92;
     }
-    SF.ui.setMenu(sys.name.toUpperCase() + ' SYSTEM', [], { nav: false });
+    SF.ui.setMenu(sys.name.toUpperCase() + ' SYSTEM', sysMenu, { nav: false });
     SF.ui.log('Entering the ' + sys.name + ' system (' + sys.className + ').' +
       (sys.flare ? ' WARNING: abnormal stellar flare activity detected.' : ''));
     // The Uhlek guard the crystal world — every entry is contested.

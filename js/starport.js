@@ -7,7 +7,8 @@ SF.modes = SF.modes || {};
   const port = {};
   SF.modes.starport = port;
 
-  port.enter = function () {
+  port.enter = function (opts) {
+    if (opts && opts.resume) { rootMenu(); return; } // back from the starmap
     SF.advanceDays(SF.s, 1);
     SF.saveGame();
     SF.ui.log('Docking complete. Welcome to Starport Arth, Captain. (Game saved.)', 'good');
@@ -54,6 +55,9 @@ SF.modes = SF.modes || {};
       { key: 'P', label: 'Personnel & Training', fn: personnel },
       { key: 'T', label: 'Trade Depot', fn: trade },
       { key: 'S', label: 'Ship Configuration', fn: shipConfig },
+      { key: 'M', label: 'Galaxy Starmap', fn: function () {
+        SF.setMode('starmap', { back: { mode: 'starport' } });
+      } },
       { key: 'L', label: 'Launch Ship', fn: launch },
     ]);
   }

@@ -54,7 +54,7 @@ sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 
 const files = ['rng.js', 'data.js', 'galaxy.js', 'state.js', 'ui.js',
-  'starport.js', 'space.js', 'planet.js', 'encounter.js', 'main.js'];
+  'starport.js', 'space.js', 'starmap.js', 'planet.js', 'encounter.js', 'main.js'];
 for (const f of files) {
   const src = fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8');
   vm.runInContext(src, sandbox, { filename: f });
@@ -216,6 +216,13 @@ const fuelBefore = s.ship.fuel;
 holdKey('ArrowRight', 1);
 if (SF.modeName === 'encounter') resolveEncounterPeacefully();
 check('hyper travel burns fuel', s.ship.fuel < fuelBefore);
+
+console.log('== starmap ==');
+clickMenu('Galaxy starmap');
+check('starmap opens from hyperspace', SF.modeName === 'starmap');
+SF.tick(0.05); // exercise the draw path
+clickMenu('Close starmap');
+check('starmap returns to hyperspace', SF.modeName === 'hyper');
 
 console.log('== find ruins, get the tablet ==');
 let ruinTarget = null;

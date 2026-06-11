@@ -464,6 +464,43 @@ console.log('== colonization ==');
     !SF.ui.menu.items.some(i => i.label.includes('Recommend')));
 }
 
+console.log('== new races ==');
+{
+  for (const id of ['velox', 'gazurtoid', 'humna']) {
+    const r = SF.data.RACES[id];
+    check(id + ' exists with valid ship/hail/topics', !!r &&
+      typeof r.ship.hull === 'number' && typeof r.ship.agility === 'number' &&
+      r.hail.friendly && r.hail.hostile && r.hail.obsequious &&
+      r.topics.themselves && r.topics.others && r.topics.ancients && r.topics.flares);
+    check(id + ' territory within hyperspace bounds', r.territory.r > 0 &&
+      r.territory.x >= 0 && r.territory.x <= 250 && r.territory.y >= 0 && r.territory.y <= 200);
+  }
+  const v = SF.data.RACES.velox.territory;
+  check('territoryRace resolves Velox space', SF.territoryRace(v.x, v.y) === 'velox');
+
+  // friendly encounters resolve via hail + break contact
+  for (const id of ['velox', 'humna']) {
+    SF.s = SF.newState();
+    SF.setMode('encounter', { raceId: id, from: 'hyper' });
+    resolveEncounterPeacefully();
+    check(id + ' encounter resolves peacefully', SF.modeName !== 'encounter');
+  }
+  // hostile Gazurtoid resolves via combat
+  SF.s = SF.newState();
+  SF.s.ship.laser = 5;
+  SF.setMode('encounter', { raceId: 'gazurtoid', from: 'hyper' });
+  let gz = 0;
+  while (SF.modeName === 'encounter' && gz++ < 60) {
+    SF.s.ship.hull = SF.s.ship.hullMax;
+    SF.modes.encounter.enemy.hull = Math.min(SF.modes.encounter.enemy.hull, 2);
+    const laser = SF.ui.menu.items.find(i => i.label.startsWith('Fire laser') && !i.disabled);
+    const close = SF.ui.menu.items.find(i => i.label === 'Close distance');
+    const range = parseInt((SF.ui.menu.title.match(/range (\d+)/) || [0, 999])[1], 10);
+    if (range <= 60 && laser) laser.fn(); else if (close) close.fn(); else break;
+  }
+  check('gazurtoid encounter resolves via combat', SF.modeName !== 'encounter');
+}
+
 console.log('');
 if (failures) {
   console.error(failures + ' CHECK(S) FAILED');

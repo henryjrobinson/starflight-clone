@@ -77,8 +77,8 @@
         "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done. Velox (tinkerers, friendly), Gazurtoid (aquatic zealots, hostile), Humna Humna (frantic merchants, friendly) added to RACES with bounded non-overlapping territories. Auto-participate via territoryRace/encounter rolls. smoke 5/5, friendly resolve peacefully, gazurtoid via combat."
     },
     {
       "id": "US-005",

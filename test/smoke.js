@@ -324,6 +324,32 @@ driveTo(() => SF.modes.surface.ruin && { x: SF.modes.surface.ruin.x + 0.5, y: SF
   () => s.flags.tablet, 'reach ruins');
 check('tablet recovered, egg coords known', s.flags.tablet && s.flags.eggCoords);
 
+console.log('== artifacts ==');
+{
+  // ownership (US-001): grantArtifact is exactly what a non-story ruin calls.
+  // Use a throwaway state so the live playthrough's combat isn't buffed.
+  const as = SF.newState();
+  const a1 = SF.grantArtifact(as);
+  check('ruin grant returns an artifact and marks it owned', !!a1 && SF.hasArtifact(as, a1.id));
+  const seen = new Set([a1.id]);
+  let dup = false;
+  for (let i = 0; i < SF.data.ARTIFACTS.length + 2; i++) {
+    const a = SF.grantArtifact(as);
+    if (a) { if (seen.has(a.id)) dup = true; seen.add(a.id); }
+  }
+  check('each artifact granted at most once', !dup);
+  check('grants return null once all are owned', SF.grantArtifact(as) === null);
+
+  // effects (US-002): each artifact measurably changes its computation
+  const clean = SF.newState();
+  const coil = SF.newState(); coil.artifacts = { fuel_coil: true };
+  check('fuel_coil lowers hyperspace fuel burn', SF.fuelPerDist(coil) < SF.fuelPerDist(clean));
+  check('shield_booster cuts damage taken (mul<1)', SF.artifactMul({ artifacts: { shield_booster: true } }, 'damageMul') < 1);
+  check('targeting_array raises hit chance (bonus>0)', SF.artifactBonus({ artifacts: { targeting_array: true } }, 'hitBonus') > 0);
+  check('no artifacts is neutral', SF.artifactMul({ artifacts: {} }, 'damageMul') === 1 &&
+    SF.artifactBonus({ artifacts: {} }, 'hitBonus') === 0);
+}
+
 console.log('== mining ==');
 const surfMode = SF.modes.surface;
 const cargoBefore = SF.cargoUsed(s);
@@ -407,6 +433,162 @@ const savedDay = s.day;
 check('save written', SF.saveGame());
 SF.s = null;
 check('load restores state', SF.loadGame() && SF.s.day === savedDay && SF.s.flags.won);
+
+console.log('== colonization ==');
+{
+  // fresh game so we don't perturb the playthrough state above
+  SF.s = SF.newState();
+  SF.s.credits = 0;
+  let target = null;
+  for (const sys of SF.galaxy.systems) {
+    for (const p of sys.planets) {
+      if (SF.data.PLANET_TYPES[p.type].landable && !p.special) { target = { sys: sys, p: p }; break; }
+    }
+    if (target) break;
+  }
+  check('found a colonizable world', !!target);
+  check('colonyValue in 200..3000 band', SF.colonyValue(target.p) >= 200 && SF.colonyValue(target.p) <= 3000);
+  check('special/non-landable worlds score 0', SF.colonyValue(SF.galaxy.byId.heart.planets[0]) === 0);
+  SF.setMode('orbit', { sysId: target.sys.id, slot: target.p.slot });
+  check('recommend hidden before scan', !SF.ui.menu.items.some(i => i.label.includes('Recommend')));
+  clickMenu('Sensor scan');
+  const expected = SF.colonyValue(target.p);
+  const before = SF.s.credits;
+  clickMenu('Recommend to Interstel');
+  check('recommendation pays the survey fee', SF.s.credits - before === expected);
+  check('recommend option removed after filing', !SF.ui.menu.items.some(i => i.label.includes('Recommend')));
+  const before2 = SF.s.credits;
+  SF.modes.orbit && SF.setMode('orbit', { sysId: target.sys.id, slot: target.p.slot });
+  clickMenu('Sensor scan');
+  check('no double payment on a filed world', SF.s.credits === before2 &&
+    !SF.ui.menu.items.some(i => i.label.includes('Recommend')));
+}
+
+console.log('== new races ==');
+{
+  for (const id of ['velox', 'gazurtoid', 'humna']) {
+    const r = SF.data.RACES[id];
+    check(id + ' exists with valid ship/hail/topics', !!r &&
+      typeof r.ship.hull === 'number' && typeof r.ship.agility === 'number' &&
+      r.hail.friendly && r.hail.hostile && r.hail.obsequious &&
+      r.topics.themselves && r.topics.others && r.topics.ancients && r.topics.flares);
+    check(id + ' territory within hyperspace bounds', r.territory.r > 0 &&
+      r.territory.x >= 0 && r.territory.x <= 250 && r.territory.y >= 0 && r.territory.y <= 200);
+  }
+  const v = SF.data.RACES.velox.territory;
+  check('territoryRace resolves Velox space', SF.territoryRace(v.x, v.y) === 'velox');
+
+  // friendly encounters resolve via hail + break contact
+  for (const id of ['velox', 'humna']) {
+    SF.s = SF.newState();
+    SF.setMode('encounter', { raceId: id, from: 'hyper' });
+    resolveEncounterPeacefully();
+    check(id + ' encounter resolves peacefully', SF.modeName !== 'encounter');
+  }
+  // hostile Gazurtoid resolves via combat
+  SF.s = SF.newState();
+  SF.s.ship.laser = 5;
+  SF.setMode('encounter', { raceId: 'gazurtoid', from: 'hyper' });
+  let gz = 0;
+  while (SF.modeName === 'encounter' && gz++ < 60) {
+    SF.s.ship.hull = SF.s.ship.hullMax;
+    SF.modes.encounter.enemy.hull = Math.min(SF.modes.encounter.enemy.hull, 2);
+    const laser = SF.ui.menu.items.find(i => i.label.startsWith('Fire laser') && !i.disabled);
+    const close = SF.ui.menu.items.find(i => i.label === 'Close distance');
+    const range = parseInt((SF.ui.menu.title.match(/range (\d+)/) || [0, 999])[1], 10);
+    if (range <= 60 && laser) laser.fn(); else if (close) close.fn(); else break;
+  }
+  check('gazurtoid encounter resolves via combat', SF.modeName !== 'encounter');
+}
+
+console.log('== interstel law ==');
+{
+  check('hunt multiplier neutral with no bounty', SF.bountyHuntMul({ bounty: 0 }) === 1);
+  check('hunt multiplier raised when wanted', SF.bountyHuntMul({ bounty: 1000 }) > 1);
+
+  // fire first on a friendly race -> a bounty accrues
+  SF.s = SF.newState();
+  SF.setMode('encounter', { raceId: 'velox', from: 'hyper' });
+  let lawGuard = 0;
+  while (SF.modeName === 'encounter' && (SF.s.bounty || 0) === 0 && lawGuard++ < 30) {
+    SF.s.ship.hull = SF.s.ship.hullMax;
+    const laser = SF.ui.menu.items.find(i => i.label.startsWith('Fire laser') && !i.disabled);
+    const close = SF.ui.menu.items.find(i => i.label === 'Close distance');
+    const range = parseInt((SF.ui.menu.title.match(/range (\d+)/) || [0, 999])[1], 10);
+    if (range <= 60 && laser) laser.fn(); else if (close) close.fn(); else break;
+  }
+  check('attacking a friendly race accrues a bounty', (SF.s.bounty || 0) > 0);
+
+  // pay it off at the starport
+  const owed = SF.s.bounty;
+  SF.s.credits = owed + 100;
+  SF.setMode('starport', {});
+  const payItem = SF.ui.menu.items.find(i => i.label.includes('Pay Interstel fine'));
+  check('starport offers the fine when wanted', !!payItem);
+  const creditsBeforePay = SF.s.credits;
+  payItem.fn();
+  check('paying the fine clears the bounty', (SF.s.bounty || 0) === 0);
+  check('paying the fine deducts exactly the owed amount', SF.s.credits === creditsBeforePay - owed);
+  check('fine option disappears once paid', !SF.ui.menu.items.some(i => i.label.includes('Pay Interstel fine')));
+}
+
+console.log('== trade goods (data) ==');
+{
+  check('TRADE_GOODS well-formed', Array.isArray(SF.data.TRADE_GOODS) && SF.data.TRADE_GOODS.length >= 4 &&
+    SF.data.TRADE_GOODS.every(g => g.id && g.name && g.base > 0 && SF.data.RACES[g.home]));
+  let profitable = false;
+  for (const g of SF.data.TRADE_GOODS) {
+    const buy = SF.tradeBuyPrice(g.home, g);
+    if (buy === null) continue;
+    for (const rid of Object.keys(SF.data.RACES)) {
+      if (rid === g.home) continue;
+      if (SF.tradeSellPrice(rid, g) > buy) profitable = true;
+    }
+  }
+  check('a profitable origin->destination pair exists', profitable);
+}
+
+console.log('== commodity trading ==');
+{
+  SF.s = SF.newState();
+  SF.s.credits = 5000;
+  const good = SF.data.TRADE_GOODS.find(g => g.home === 'velox');
+  SF.setMode('encounter', { raceId: 'velox', from: 'hyper' });
+  const tradeItem = SF.ui.menu.items.find(i => i.label.includes('Trade goods'));
+  check('friendly race offers a trade option', !!tradeItem);
+  tradeItem.fn();
+  const buyItem = SF.ui.menu.items.find(i => i.label.includes('Buy') && i.label.includes(good.name));
+  check('home race sells its own good', !!buyItem);
+  const creditsBeforeBuy = SF.s.credits;
+  const cargoBeforeBuy = SF.cargoUsed(SF.s);
+  buyItem.fn();
+  const bought = (SF.s.ship.goods || {})[good.id] || 0;
+  check('buying loads goods into the hold', bought > 0);
+  check('buying spends credits', SF.s.credits < creditsBeforeBuy);
+  check('goods occupy cargo space', SF.cargoUsed(SF.s) === cargoBeforeBuy + bought);
+  const buyPrice = SF.tradeBuyPrice('velox', good);
+
+  SF.ui.menu.items.find(i => i.label.includes('Done trading')).fn();
+  SF.ui.menu.items.find(i => i.label.includes('Break contact')).fn();
+
+  SF.setMode('encounter', { raceId: 'thrynn', from: 'hyper' });
+  SF.ui.menu.items.find(i => i.label.includes('Trade goods')).fn();
+  const sellItem = SF.ui.menu.items.find(i => i.label.includes('Sell') && i.label.includes(good.name));
+  check('a different race buys the hauled good', !!sellItem);
+  const sellPrice = SF.tradeSellPrice('thrynn', good);
+  check('destination price beats origin price (profit)', sellPrice > buyPrice);
+  const creditsBeforeSell = SF.s.credits;
+  sellItem.fn();
+  check('selling clears the good and pays out', (SF.s.ship.goods || {})[good.id] === undefined &&
+    SF.s.credits === creditsBeforeSell + bought * sellPrice);
+
+  // capacity is enforced
+  SF.s.ship.cargo = { iron: SF.cargoMax(SF.s) };
+  SF.s.ship.goods = {};
+  const beforeFull = SF.cargoUsed(SF.s);
+  SF.addGood(SF.s, good.id, 10);
+  check('cannot load goods past cargo capacity', SF.cargoUsed(SF.s) === beforeFull);
+}
 
 console.log('');
 if (failures) {

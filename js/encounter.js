@@ -39,13 +39,62 @@
       { key: 'W', label: 'Open distance', fn: function () { maneuver(30); } },
       { key: 'F', label: 'Attempt escape', fn: flee },
     ];
-    if (!isHostile()) items.push({ key: 'B', label: 'Break contact peacefully', fn: leave });
+    if (!isHostile()) {
+      items.push({ key: 'G', label: 'Trade goods', fn: tradeMenu });
+      items.push({ key: 'B', label: 'Break contact peacefully', fn: leave });
+    }
     SF.ui.setMenu('ENCOUNTER — ' + enc.race.name.toUpperCase() + ' (range ' + Math.round(enc.range) + ')', items);
   }
 
   function leave() {
     SF.ui.log('You disengage and resume course.');
     returnToSpace();
+  }
+
+  // ----------------------------------------------------------- trade goods
+  function tradeMenu() {
+    const s = SF.s;
+    const items = [];
+    for (const g of SF.data.TRADE_GOODS) {
+      const buy = SF.tradeBuyPrice(enc.raceId, g);
+      if (buy !== null) {
+        items.push({ label: 'Buy 10 ' + g.name + ' @ ' + buy + ' cr', fn: function () { buyGood(g); } });
+      }
+    }
+    for (const g of SF.data.TRADE_GOODS) {
+      const have = (s.ship.goods || {})[g.id] || 0;
+      if (have > 0) {
+        items.push({ label: 'Sell ' + have + ' ' + g.name + ' @ ' + SF.tradeSellPrice(enc.raceId, g) + ' cr', fn: function () { sellGood(g); } });
+      }
+    }
+    if (!items.length) items.push({ label: '(no trade available with this race)', fn: function () {}, disabled: true });
+    items.push({ key: 'B', label: 'Done trading', fn: actionMenu });
+    SF.ui.setMenu('TRADE — ' + enc.race.name.toUpperCase(), items);
+  }
+
+  function buyGood(good) {
+    const s = SF.s;
+    const price = SF.tradeBuyPrice(enc.raceId, good);
+    const space = SF.cargoMax(s) - SF.cargoUsed(s);
+    const qty = Math.min(10, Math.floor(s.credits / price), space);
+    if (qty <= 0) { SF.ui.log(space <= 0 ? 'Cargo hold is full.' : 'Not enough credits.', 'warn'); return; }
+    s.credits -= qty * price;
+    SF.addGood(s, good.id, qty);
+    SF.ui.log('Bought ' + qty + ' ' + good.name + ' for ' + SF.ui.fmt(qty * price) + ' cr.', 'good');
+    SF.ui.setStatus();
+    tradeMenu();
+  }
+
+  function sellGood(good) {
+    const s = SF.s;
+    const have = (s.ship.goods || {})[good.id] || 0;
+    if (!have) return;
+    const price = SF.tradeSellPrice(enc.raceId, good);
+    delete s.ship.goods[good.id];
+    SF.earn(s, have * price);
+    SF.ui.log('Sold ' + have + ' ' + good.name + ' to the ' + enc.race.name + ' for ' + SF.ui.fmt(have * price) + ' cr.', 'good');
+    SF.ui.setStatus();
+    tradeMenu();
   }
 
   function returnToSpace() {
@@ -142,6 +191,9 @@
   function markAggression() {
     if (!enc.shotsFired && !enc.race.hostile) {
       SF.s.flags.rel[enc.raceId] = 'hostile';
+      const fine = 600 + Math.round((enc.enemy.hullMax || 0) * 5);
+      SF.s.bounty = (SF.s.bounty || 0) + fine;
+      SF.ui.log('Unprovoked attack logged by Interstel. Bounty on your ship is now ' + SF.ui.fmt(SF.s.bounty) + ' cr.', 'warn');
       SF.ui.log('The ' + enc.race.name + ' will remember this aggression.', 'warn');
     }
     enc.shotsFired = true;
@@ -156,7 +208,7 @@
     const s = SF.s;
     if (Math.round(enc.range) > 60) { SF.ui.log('Out of laser range (60). Close the distance.', 'warn'); return; }
     markAggression();
-    if (Math.random() < 0.8) {
+    if (Math.random() < 0.8 + SF.artifactBonus(s, 'hitBonus')) {
       const dmg = playerDamage(3 + s.ship.laser * 3 + SF.skill(s, 'engineering') / 20);
       enc.enemy.hull -= dmg;
       SF.ui.log('Laser hit! Enemy takes ' + dmg + ' damage.', 'good');
@@ -170,7 +222,7 @@
     const s = SF.s;
     if (Math.round(enc.range) > 150) { SF.ui.log('Out of missile range (150).', 'warn'); return; }
     markAggression();
-    if (Math.random() < 0.6) {
+    if (Math.random() < 0.6 + SF.artifactBonus(s, 'hitBonus')) {
       const dmg = playerDamage(14 * s.ship.missile);
       enc.enemy.hull -= dmg;
       SF.ui.log('Missile impact! Enemy takes ' + dmg + ' damage.', 'good');
@@ -262,7 +314,7 @@
     const useMissile = canMissile && (!canLaser || Math.random() < 0.35);
     const base = useMissile ? 12 * enc.enemy.missile : 3 + enc.enemy.laser * 3;
     if (Math.random() < 0.75) {
-      const dmg = Math.max(1, Math.round(base * (1 - 0.12 * s.ship.shield) - s.ship.armor));
+      const dmg = Math.max(1, Math.round((base * (1 - 0.12 * s.ship.shield) - s.ship.armor) * SF.artifactMul(s, 'damageMul')));
       s.ship.hull -= dmg;
       SF.ui.log('HIT! ' + (useMissile ? 'Missile' : 'Laser') + ' strikes for ' + dmg + '. Hull ' +
         Math.max(0, Math.ceil(s.ship.hull)) + '/' + s.ship.hullMax + '.', 'bad');

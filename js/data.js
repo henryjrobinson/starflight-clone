@@ -45,6 +45,33 @@ SF.data.HIRE_FEE = 500;
 SF.data.TRAIN_FEE = 150;          // per +5 session
 SF.data.HEAL_FEE = 100;           // full vitality restore at starport
 
+// ----------------------------------------------------------- artifacts
+// Usable relics recovered from non-story ruins (distinct from the story
+// tablet/egg). Each grants a passive ship bonus; effects applied where
+// relevant in combat and hyperspace fuel math. Owned once each.
+SF.data.ARTIFACTS = [
+  { id: 'shield_booster', name: 'Resonance Shield', desc: 'Ancient harmonics blunt incoming fire — combat damage taken reduced 15%.', effect: { damageMul: 0.85 } },
+  { id: 'targeting_array', name: 'Seeker Lens', desc: 'A self-aligning optic steadies your aim — weapon hit chance +12%.', effect: { hitBonus: 0.12 } },
+  { id: 'fuel_coil', name: 'Flux Coil', desc: 'A coil that folds space a little tighter — hyperspace fuel burn reduced 15%.', effect: { fuelMul: 0.85 } },
+];
+
+// -------------------------------------------------------- trade goods
+// Culture-specific commodities. Each good's home race sells it cheap;
+// other races buy it dear. Buy low at the source, haul it, sell high.
+SF.data.TRADE_GOODS = [
+  { id: 'velox_tools',  name: 'Velox Tools',      base: 120, home: 'velox'  },
+  { id: 'elowan_seed',  name: 'Elowan Seedstock', base: 90,  home: 'elowan' },
+  { id: 'thrynn_spice', name: 'Thrynn Spice',     base: 150, home: 'thrynn' },
+  { id: 'spemin_slime', name: 'Spemin Slime',     base: 40,  home: 'spemin' },
+  { id: 'mechan_core',  name: 'Mechan Cogitator', base: 200, home: 'mechan' },
+  { id: 'humna_sundry', name: 'Humna Sundries',   base: 70,  home: 'humna'  },
+];
+SF.data.TRADE_GOOD_BY_ID = {};
+SF.data.TRADE_GOODS.forEach(function (g) { SF.data.TRADE_GOOD_BY_ID[g.id] = g; });
+SF.data.TRADE_BUY_MUL = 0.65;       // a race sells its home good to you at this
+SF.data.TRADE_SELL_MUL = 1.25;      // a race buys a non-home good from you at this
+SF.data.TRADE_SELL_HOME_MUL = 0.5;  // a race won't pay much for its own product
+
 // ------------------------------------------------------------ planet types
 SF.data.PLANET_TYPES = {
   molten: { name: 'Molten',     colors: ['#601000', '#a02800', '#e06010', '#ffd040'], richMul: 1.6, bioMax: 0, landable: true,  temp: 'searing' },
@@ -159,6 +186,54 @@ SF.data.RACES = {
       others: '"Everybody\'s scared. Even the Thrynn pulled their patrols back. Whatever\'s waking up out there, it\'s big."',
       ancients: '"Heard a salvager found a tablet in some ruins and sold it for a fortune. Ruins are money, friend."',
       flares: '"Suns don\'t just flare on schedule. Somebody lit a fuse."',
+    },
+  },
+  velox: {
+    name: 'Velox', color: '#e0a040', territory: { x: 220, y: 100, r: 30 },
+    hostile: false, brave: true, freq: 0.11,
+    ship: { hull: 40, shield: 1, armor: 1, laser: 1, missile: 0, agility: 2 },
+    hail: {
+      friendly: '*click-whirr* "A new chassis approaches! The Velox greet you. Do you carry components? Tools? Anything that hums or sparks?"',
+      hostile: '*angry buzzing* "You would scrap the Velox?! Our mandibles are SHARP, soft-thing!"',
+      obsequious: '"Flattery is inefficient, but pleasant. Speak, polished one."',
+    },
+    topics: {
+      themselves: '"We Velox build, unbuild, rebuild. A machine left alone is a machine improved. Your hull has seven inefficiencies — shall we list them?"',
+      others: '"The Thrynn pay well for our work. The Spemin pay in lies. The Uhlek do not pay; they simply unmake. Avoid the southwest."',
+      ancients: '"The Ancients were the finest engineers to ever live. We study their ruins like scripture. Bring us nothing — just admire, as we do."',
+      flares: '"A sun is a reactor, and a reactor flaring on schedule means a hand on the control rod. This is engineering, not nature."',
+    },
+  },
+  gazurtoid: {
+    name: 'Gazurtoid', color: '#30c0a0', territory: { x: 110, y: 175, r: 28 },
+    hostile: true, brave: true, freq: 0.13,
+    ship: { hull: 70, shield: 2, armor: 1, laser: 3, missile: 1, agility: 1 },
+    hail: {
+      friendly: '"You breathe AIR. You are an abomination to the Deep. The Gazurtoid will cleanse you, dry-thing."',
+      hostile: '"The tide rises. You drown now."',
+      obsequious: '"Grovel all you wish, air-breather. The Deep does not forgive lungs."',
+    },
+    topics: {
+      themselves: '"We are the faithful of the Ocean Eternal. All dry life is heresy to be washed away."',
+      others: '"Every land-crawler is the same blasphemy. We do not distinguish our heresies."',
+      ancients: '"The Ancients drained worlds to build their toys. For this alone they earned the Deep\'s hatred."',
+      flares: '"The suns boil the oceans of the faithful. For this, every dry-world will answer."',
+    },
+  },
+  humna: {
+    name: 'Humna Humna', color: '#f070b0', territory: { x: 30, y: 110, r: 28 },
+    hostile: false, brave: false, freq: 0.12,
+    ship: { hull: 28, shield: 0, armor: 0, laser: 1, missile: 0, agility: 2 },
+    hail: {
+      friendly: '"BuyBuyBuy! Sell! Trade! The Humna Humna offer prices so good they are ALMOST honest! What do you carry, friend-with-credits?"',
+      hostile: '"No no no, violence is bad for margins! We have a discount! Please! A DISCOUNT!"',
+      obsequious: '"Ohhh a customer with MANNERS, very rare, very valuable, we like you already!"',
+    },
+    topics: {
+      themselves: '"We Humna Humna buy low and sell highhh. Two mouths, one for talking, one for the deals. It is a metaphor. Mostly."',
+      others: '"Thrynn drive a hard bargain. Elowan barely haggle, bless them. Spemin will swindle you, then themselves."',
+      ancients: '"Ancient relics? Best margins in the galaxy! If you find one, you find ME first, yes? Yes."',
+      flares: '"Bad for business, the flares! Whole markets, gone! Somebody is burning my customers!"',
     },
   },
 };

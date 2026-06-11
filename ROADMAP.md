@@ -16,6 +16,10 @@ Status legend: ✅ done · ⏳ in progress · ❌ not started
 - ✅ Open-sourced (MIT) at github.com/henryjrobinson/starflight-clone
 - ✅ Live at starflight-clone.vercel.app
 - ✅ Social launch drafts in `social/` (Twitter, Facebook, LinkedIn)
+- ✅ Backlog feature set (Ralph autonomous build, `ralph/backlog-features`):
+  functional artifacts, colonization recommendations, three new races (Velox,
+  Gazurtoid, Humna Humna), Interstel law (bounties/fines), commodity trading.
+  Headless smoke harness now at 93 checks.
 
 ## Promotion track
 
@@ -50,17 +54,15 @@ Status legend: ✅ done · ⏳ in progress · ❌ not started
 
 ## Game backlog (post-launch, roughly in value order)
 
-- ❌ Functional artifacts: usable relics (shield amplifier, cloaking device)
-  found in ruins, not just story keys
-- ❌ Planet colonization recommendations: survey worlds, recommend to
-  Interstel for a fee — the original's second economy
-- ❌ More alien races (Velox, Gazurtoid, Humna Humna) with their own
-  territories, dialogue, and grudges
+Shipped in the Ralph autonomous run (see Shipped above): functional artifacts,
+colonization recommendations, three new races, Interstel law, commodity trading.
+
+Still open — deliberately held back from the autonomous run because each needs a
+human in the loop (narrative judgment, big rewrite, or no headless test gate):
+
 - ❌ Story depth: the Endurium twist, built up through dialogue clues and a
-  late-game reveal (Henry's favorite twist — handle with care)
-- ❌ Interstel law: fines/bounties for attacking friendly races
-- ❌ Commodity trading with alien cultures (Starflight 2 feature — explicitly
-  later)
+  late-game reveal (Henry's favorite twist — handle with care, build with Henry)
 - ❌ Multi-ship encounters and real-time combat maneuvering (biggest rewrite)
-- ❌ Sound and music (WebAudio, procedural to keep the zero-asset rule)
+- ❌ Sound and music (WebAudio, procedural to keep the zero-asset rule; no
+  headless audio test, so verify interactively)
 - ❌ Consider retitle ("Starflight Tribute") if the project gets traction

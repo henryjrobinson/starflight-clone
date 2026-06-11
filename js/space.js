@@ -116,7 +116,7 @@
       if (enterFlux(s)) return;
     }
     const race = SF.territoryRace(s.hx, s.hy);
-    if (rollEncounter(SF.data.RACES[race].freq / 6, dt)) {
+    if (rollEncounter(SF.data.RACES[race].freq / 6 * SF.bountyHuntMul(s), dt)) {
       SF.setMode('encounter', { raceId: race, from: 'hyper' });
     }
   };

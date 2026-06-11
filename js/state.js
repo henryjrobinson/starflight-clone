@@ -27,6 +27,7 @@ SF.newState = function () {
       hull: 50, hullMax: 50,
       fuel: 60,
       cargo: {},
+      goods: {},
       lifeforms: 0,
     },
     crew: crew,
@@ -34,9 +35,53 @@ SF.newState = function () {
     flags: { rel: {} },          // story flags + race relations
     visited: { arth: true },     // systems seen on the map
     fluxes: {},                  // discovered continuum fluxes (by index)
+    artifacts: {},               // recovered Ancient artifacts (by id)
+    bounty: 0,                   // Interstel bounty for attacking friendlies
     kills: 0,
     earnings: 0,
   };
+};
+
+// A standing bounty draws more hunters in hyperspace.
+SF.bountyHuntMul = function (s) {
+  return (s.bounty || 0) > 0 ? 1.6 : 1;
+};
+
+// ----------------------------------------------------------- artifacts
+SF.hasArtifact = function (s, id) {
+  return !!(s.artifacts && s.artifacts[id]);
+};
+
+// Grant the first not-yet-owned artifact; returns it, or null if all owned.
+SF.grantArtifact = function (s) {
+  s.artifacts = s.artifacts || {};
+  for (const a of SF.data.ARTIFACTS) {
+    if (!s.artifacts[a.id]) {
+      s.artifacts[a.id] = true;
+      return a;
+    }
+  }
+  return null;
+};
+
+// Product of a numeric effect across owned artifacts (default 1 = no change).
+SF.artifactMul = function (s, prop) {
+  let mul = 1;
+  if (!s.artifacts) return mul;
+  for (const a of SF.data.ARTIFACTS) {
+    if (s.artifacts[a.id] && a.effect[prop] !== undefined) mul *= a.effect[prop];
+  }
+  return mul;
+};
+
+// Sum of a numeric effect across owned artifacts (default 0 = no change).
+SF.artifactBonus = function (s, prop) {
+  let sum = 0;
+  if (!s.artifacts) return sum;
+  for (const a of SF.data.ARTIFACTS) {
+    if (s.artifacts[a.id] && a.effect[prop] !== undefined) sum += a.effect[prop];
+  }
+  return sum;
 };
 
 // ------------------------------------------------------------ derived stats
@@ -46,7 +91,29 @@ SF.cargoMax = function (s) { return 250 + s.ship.pods * 250; };
 SF.cargoUsed = function (s) {
   let total = 0;
   for (const k of Object.keys(s.ship.cargo)) total += s.ship.cargo[k];
+  if (s.ship.goods) for (const k of Object.keys(s.ship.goods)) total += s.ship.goods[k];
   return total;
+};
+
+// Add trade goods to the hold, capped by remaining cargo space. Returns
+// the quantity actually loaded.
+SF.addGood = function (s, id, qty) {
+  s.ship.goods = s.ship.goods || {};
+  const space = SF.cargoMax(s) - SF.cargoUsed(s);
+  const added = Math.max(0, Math.min(qty, space));
+  if (added > 0) s.ship.goods[id] = (s.ship.goods[id] || 0) + added;
+  return added;
+};
+
+// Price a race sells its home good to you, or null if it doesn't stock it.
+SF.tradeBuyPrice = function (raceId, good) {
+  return good.home === raceId ? Math.round(good.base * SF.data.TRADE_BUY_MUL) : null;
+};
+
+// Price a race pays you for a good you carry.
+SF.tradeSellPrice = function (raceId, good) {
+  const mul = good.home === raceId ? SF.data.TRADE_SELL_HOME_MUL : SF.data.TRADE_SELL_MUL;
+  return Math.round(good.base * mul);
 };
 
 SF.skill = function (s, role) {
@@ -57,8 +124,9 @@ SF.skill = function (s, role) {
 };
 
 // fuel cost per unit of hyperspace distance, reduced by navigation skill
+// and by the Flux Coil artifact if installed
 SF.fuelPerDist = function (s) {
-  return 0.06 * (1 - SF.skill(s, 'navigation') * 0.003);
+  return 0.06 * (1 - SF.skill(s, 'navigation') * 0.003) * SF.artifactMul(s, 'fuelMul');
 };
 
 // ----------------------------------------------------------------- mutators

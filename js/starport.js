@@ -98,7 +98,8 @@ SF.modes = SF.modes || {};
   };
 
   function rootMenu() {
-    SF.ui.setMenu('STARPORT ARTH', [
+    const s = SF.s;
+    const items = [
       { key: 'O', label: 'Operations (briefing)', fn: operations },
       { key: 'P', label: 'Personnel & Training', fn: personnel },
       { key: 'T', label: 'Trade Depot', fn: trade },
@@ -106,8 +107,26 @@ SF.modes = SF.modes || {};
       { key: 'M', label: 'Galaxy Starmap', fn: function () {
         SF.setMode('starmap', { back: { mode: 'starport' } });
       } },
-      { key: 'L', label: 'Launch Ship', fn: launch },
-    ]);
+    ];
+    if ((s.bounty || 0) > 0) {
+      items.push({ key: 'F', label: 'Pay Interstel fine (' + SF.ui.fmt(s.bounty) + ' cr)', fn: payFine });
+    }
+    items.push({ key: 'L', label: 'Launch Ship', fn: launch });
+    SF.ui.setMenu('STARPORT ARTH', items);
+  }
+
+  function payFine() {
+    const s = SF.s;
+    const owed = s.bounty || 0;
+    if (owed <= 0) { SF.ui.log('You have no outstanding bounty.'); return; }
+    if (!SF.spend(s, owed)) {
+      SF.ui.log('Insufficient credits to clear the ' + SF.ui.fmt(owed) + ' cr bounty.', 'warn');
+      return;
+    }
+    s.bounty = 0;
+    SF.ui.log('Interstel bounty cleared. Your record is clean, Captain.', 'good');
+    SF.ui.setStatus();
+    rootMenu();
   }
 
   // ---------------------------------------------------------- operations
@@ -117,7 +136,11 @@ SF.modes = SF.modes || {};
     SF.ui.log(SF.data.notice(s.flags));
     SF.ui.log('Service record: day ' + Math.floor(s.day) + ' | ' +
       SF.ui.fmt(s.earnings) + ' cr lifetime earnings | ' + s.kills + ' hostiles destroyed.');
-    if (s.flags.tablet) SF.ui.log('Artifacts logged: Ancient Tablet' + (s.flags.egg ? ', the BLACK EGG' : '') + '.');
+    if (s.flags.tablet) SF.ui.log('Story relics logged: Ancient Tablet' + (s.flags.egg ? ', the BLACK EGG' : '') + '.');
+    const owned = SF.data.ARTIFACTS.filter(function (a) { return SF.hasArtifact(s, a.id); });
+    if (owned.length) {
+      SF.ui.log('Artifacts installed: ' + owned.map(function (a) { return a.name; }).join(', ') + '.', 'good');
+    }
     rootMenu();
   }
 

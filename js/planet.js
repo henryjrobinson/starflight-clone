@@ -18,6 +18,22 @@
     return Math.ceil(1 + p.gravity);
   }
 
+  // Interstel pays for surveys of habitable worlds. Score blends gravity
+  // (best near 1g), climate, and biological activity into a 200..3000 cr fee.
+  SF.colonyValue = function (p) {
+    const type = SF.data.PLANET_TYPES[p.type];
+    if (!type.landable || p.special) return 0;
+    const grav = Math.max(0, 1 - Math.abs(p.gravity - 1.0));
+    const climate = { temperate: 1, hot: 0.5, cold: 0.5, frigid: 0.2, searing: 0.1 }[type.temp] || 0;
+    const bio = p.bio / 3;
+    const score = grav * 0.4 + climate * 0.3 + bio * 0.3;
+    return Math.round(200 + score * 2800);
+  };
+
+  function colonyKey() {
+    return orbit.sys.id + ':' + orbit.p.slot;
+  }
+
   function buildMenu() {
     const s = SF.s;
     const p = orbit.p;
@@ -32,6 +48,10 @@
         label: 'Land (' + landingFuel(p) + ' fuel down, ' + landingFuel(p) + ' up)',
         fn: land,
       });
+    }
+    if (type.landable && !p.special && orbit.scanned &&
+        !((s.flags.colonized || {})[colonyKey()])) {
+      items.push({ key: 'R', label: 'Recommend to Interstel (+' + SF.ui.fmt(SF.colonyValue(p)) + ' cr)', fn: recommend });
     }
     if (p.special === 'crystal' && s.flags.egg && !s.flags.won) {
       items.push({ key: 'E', label: '*** LAUNCH THE BLACK EGG ***', fn: launchEgg });
@@ -59,6 +79,27 @@
       SF.ui.log('  The entire world is a lattice of resonating crystal. It is BROADCASTING into the sun.', 'bad');
       if (!s.flags.egg) SF.ui.log('  Nothing in your arsenal can scratch it. Something else is needed.', 'warn');
     }
+    if (type.landable && !p.special) {
+      SF.ui.log('  Colonization rating filed: this world is worth ' + SF.ui.fmt(SF.colonyValue(p)) + ' cr to Interstel.');
+    }
+    buildMenu(); // reveal the Recommend option now that we've scanned
+  }
+
+  function recommend() {
+    const s = SF.s;
+    const p = orbit.p;
+    s.flags.colonized = s.flags.colonized || {};
+    const key = colonyKey();
+    if (s.flags.colonized[key]) {
+      SF.ui.log(p.name + ' is already filed with Interstel.', 'warn');
+      return;
+    }
+    const value = SF.colonyValue(p);
+    s.flags.colonized[key] = true;
+    SF.earn(s, value);
+    SF.ui.log('Colonization assessment for ' + p.name + ' filed with Interstel. Survey fee: +' + SF.ui.fmt(value) + ' cr.', 'good');
+    SF.ui.setStatus();
+    buildMenu();
   }
 
   function land() {

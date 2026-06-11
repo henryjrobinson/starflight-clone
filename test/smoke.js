@@ -434,6 +434,36 @@ check('save written', SF.saveGame());
 SF.s = null;
 check('load restores state', SF.loadGame() && SF.s.day === savedDay && SF.s.flags.won);
 
+console.log('== colonization ==');
+{
+  // fresh game so we don't perturb the playthrough state above
+  SF.s = SF.newState();
+  SF.s.credits = 0;
+  let target = null;
+  for (const sys of SF.galaxy.systems) {
+    for (const p of sys.planets) {
+      if (SF.data.PLANET_TYPES[p.type].landable && !p.special) { target = { sys: sys, p: p }; break; }
+    }
+    if (target) break;
+  }
+  check('found a colonizable world', !!target);
+  check('colonyValue in 200..3000 band', SF.colonyValue(target.p) >= 200 && SF.colonyValue(target.p) <= 3000);
+  check('special/non-landable worlds score 0', SF.colonyValue(SF.galaxy.byId.heart.planets[0]) === 0);
+  SF.setMode('orbit', { sysId: target.sys.id, slot: target.p.slot });
+  check('recommend hidden before scan', !SF.ui.menu.items.some(i => i.label.includes('Recommend')));
+  clickMenu('Sensor scan');
+  const expected = SF.colonyValue(target.p);
+  const before = SF.s.credits;
+  clickMenu('Recommend to Interstel');
+  check('recommendation pays the survey fee', SF.s.credits - before === expected);
+  check('recommend option removed after filing', !SF.ui.menu.items.some(i => i.label.includes('Recommend')));
+  const before2 = SF.s.credits;
+  SF.modes.orbit && SF.setMode('orbit', { sysId: target.sys.id, slot: target.p.slot });
+  clickMenu('Sensor scan');
+  check('no double payment on a filed world', SF.s.credits === before2 &&
+    !SF.ui.menu.items.some(i => i.label.includes('Recommend')));
+}
+
 console.log('');
 if (failures) {
   console.error(failures + ' CHECK(S) FAILED');

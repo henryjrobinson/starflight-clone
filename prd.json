@@ -60,8 +60,8 @@
         "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done. SF.colonyValue(p) blends gravity/climate/bio into 200-3000cr; 'Recommend to Interstel' appears after scan on landable non-special worlds, pays once, tracked in s.flags.colonized. smoke 5/5."
     },
     {
       "id": "US-004",

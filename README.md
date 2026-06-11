@@ -49,12 +49,20 @@ Figure out why the stars are dying — and turn a profit on the way.
 - Land on rocky worlds, drive the terrain vehicle, mine 19 minerals (sell
   them back home), capture lifeforms for the Science Institute, survive lava,
   heat, and blizzards
-- Five alien races with territory, dispositions, and dialogue: hail them with
-  a Friendly / Hostile / Obsequious posture and interrogate them about the
+- Recover **Ancient artifacts** from ruins — the Resonance Shield, Seeker Lens,
+  and Flux Coil grant passive bonuses to damage taken, hit chance, and fuel burn
+- **Recommend habitable worlds to Interstel** for a survey fee scaled by
+  gravity, climate, and biology — a second economy alongside mining
+- Nine alien races with territory, dispositions, and dialogue: the Mechan,
+  Spemin, Elowan, Thrynn, Uhlek, Velox, Gazurtoid, Humna Humna, and renegades.
+  Hail them Friendly / Hostile / Obsequious and interrogate them about the
   Ancients and the flares. Some respond to flattery. Some only to force.
-  One doesn't respond at all.
+- **Commodity trading** — buy a culture's home good cheap, haul it across the
+  sector, and sell it dear to someone who wants it (the Humna Humna live for this)
 - Turn-based ship combat with range envelopes (lasers ≤60, missiles ≤150),
   fleeing, surrenders, salvage, and races that *remember* unprovoked attacks
+- **Interstel law** — fire first on a peaceful race and you earn a bounty that
+  draws more hunters; pay it off at the Starport to clear your record
 - **Continuum fluxes** — 7 hidden wormhole pairs in hyperspace. Fly into one
   and space folds: instant, fuel-free transit to its partner. Invisible until
   discovered (a science officer at 40+ skill can spot the shimmer);

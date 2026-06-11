@@ -151,8 +151,8 @@
         "node test/smoke.js still prints ALL SMOKE CHECKS PASSED."
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done. README features list updated (artifacts, colonization, 9 races, Interstel law, commodity trading). ROADMAP moves the five shipped items to Shipped and leaves Endurium twist, real-time combat, and sound in the backlog as held-back. smoke still green."
     }
   ]
 }

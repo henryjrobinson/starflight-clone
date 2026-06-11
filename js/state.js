@@ -35,9 +35,15 @@ SF.newState = function () {
     visited: { arth: true },     // systems seen on the map
     fluxes: {},                  // discovered continuum fluxes (by index)
     artifacts: {},               // recovered Ancient artifacts (by id)
+    bounty: 0,                   // Interstel bounty for attacking friendlies
     kills: 0,
     earnings: 0,
   };
+};
+
+// A standing bounty draws more hunters in hyperspace.
+SF.bountyHuntMul = function (s) {
+  return (s.bounty || 0) > 0 ? 1.6 : 1;
 };
 
 // ----------------------------------------------------------- artifacts

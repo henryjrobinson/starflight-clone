@@ -98,7 +98,8 @@ SF.modes = SF.modes || {};
   };
 
   function rootMenu() {
-    SF.ui.setMenu('STARPORT ARTH', [
+    const s = SF.s;
+    const items = [
       { key: 'O', label: 'Operations (briefing)', fn: operations },
       { key: 'P', label: 'Personnel & Training', fn: personnel },
       { key: 'T', label: 'Trade Depot', fn: trade },
@@ -106,8 +107,26 @@ SF.modes = SF.modes || {};
       { key: 'M', label: 'Galaxy Starmap', fn: function () {
         SF.setMode('starmap', { back: { mode: 'starport' } });
       } },
-      { key: 'L', label: 'Launch Ship', fn: launch },
-    ]);
+    ];
+    if ((s.bounty || 0) > 0) {
+      items.push({ key: 'F', label: 'Pay Interstel fine (' + SF.ui.fmt(s.bounty) + ' cr)', fn: payFine });
+    }
+    items.push({ key: 'L', label: 'Launch Ship', fn: launch });
+    SF.ui.setMenu('STARPORT ARTH', items);
+  }
+
+  function payFine() {
+    const s = SF.s;
+    const owed = s.bounty || 0;
+    if (owed <= 0) { SF.ui.log('You have no outstanding bounty.'); return; }
+    if (!SF.spend(s, owed)) {
+      SF.ui.log('Insufficient credits to clear the ' + SF.ui.fmt(owed) + ' cr bounty.', 'warn');
+      return;
+    }
+    s.bounty = 0;
+    SF.ui.log('Interstel bounty cleared. Your record is clean, Captain.', 'good');
+    SF.ui.setStatus();
+    rootMenu();
   }
 
   // ---------------------------------------------------------- operations

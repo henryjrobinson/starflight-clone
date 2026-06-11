@@ -142,6 +142,9 @@
   function markAggression() {
     if (!enc.shotsFired && !enc.race.hostile) {
       SF.s.flags.rel[enc.raceId] = 'hostile';
+      const fine = 600 + Math.round((enc.enemy.hullMax || 0) * 5);
+      SF.s.bounty = (SF.s.bounty || 0) + fine;
+      SF.ui.log('Unprovoked attack logged by Interstel. Bounty on your ship is now ' + SF.ui.fmt(SF.s.bounty) + ' cr.', 'warn');
       SF.ui.log('The ' + enc.race.name + ' will remember this aggression.', 'warn');
     }
     enc.shotsFired = true;

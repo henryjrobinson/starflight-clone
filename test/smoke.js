@@ -501,6 +501,37 @@ console.log('== new races ==');
   check('gazurtoid encounter resolves via combat', SF.modeName !== 'encounter');
 }
 
+console.log('== interstel law ==');
+{
+  check('hunt multiplier neutral with no bounty', SF.bountyHuntMul({ bounty: 0 }) === 1);
+  check('hunt multiplier raised when wanted', SF.bountyHuntMul({ bounty: 1000 }) > 1);
+
+  // fire first on a friendly race -> a bounty accrues
+  SF.s = SF.newState();
+  SF.setMode('encounter', { raceId: 'velox', from: 'hyper' });
+  let lawGuard = 0;
+  while (SF.modeName === 'encounter' && (SF.s.bounty || 0) === 0 && lawGuard++ < 30) {
+    SF.s.ship.hull = SF.s.ship.hullMax;
+    const laser = SF.ui.menu.items.find(i => i.label.startsWith('Fire laser') && !i.disabled);
+    const close = SF.ui.menu.items.find(i => i.label === 'Close distance');
+    const range = parseInt((SF.ui.menu.title.match(/range (\d+)/) || [0, 999])[1], 10);
+    if (range <= 60 && laser) laser.fn(); else if (close) close.fn(); else break;
+  }
+  check('attacking a friendly race accrues a bounty', (SF.s.bounty || 0) > 0);
+
+  // pay it off at the starport
+  const owed = SF.s.bounty;
+  SF.s.credits = owed + 100;
+  SF.setMode('starport', {});
+  const payItem = SF.ui.menu.items.find(i => i.label.includes('Pay Interstel fine'));
+  check('starport offers the fine when wanted', !!payItem);
+  const creditsBeforePay = SF.s.credits;
+  payItem.fn();
+  check('paying the fine clears the bounty', (SF.s.bounty || 0) === 0);
+  check('paying the fine deducts exactly the owed amount', SF.s.credits === creditsBeforePay - owed);
+  check('fine option disappears once paid', !SF.ui.menu.items.some(i => i.label.includes('Pay Interstel fine')));
+}
+
 console.log('');
 if (failures) {
   console.error(failures + ' CHECK(S) FAILED');

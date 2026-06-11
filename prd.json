@@ -92,8 +92,8 @@
         "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done. First-strike on a non-hostile race accrues s.bounty (600 + 5*enemy hull) via markAggression. SF.bountyHuntMul raises hyperspace encounter frequency while wanted. smoke 5/5."
     },
     {
       "id": "US-006",
@@ -107,8 +107,8 @@
         "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done. Starport root menu shows 'Pay Interstel fine' only when bounty>0 and clears it for credits via payFine(). smoke verifies appearance, clearing, exact deduction, and removal after payment. 5/5."
     },
     {
       "id": "US-007",

@@ -27,6 +27,7 @@ SF.newState = function () {
       hull: 50, hullMax: 50,
       fuel: 60,
       cargo: {},
+      goods: {},
       lifeforms: 0,
     },
     crew: crew,
@@ -90,7 +91,29 @@ SF.cargoMax = function (s) { return 250 + s.ship.pods * 250; };
 SF.cargoUsed = function (s) {
   let total = 0;
   for (const k of Object.keys(s.ship.cargo)) total += s.ship.cargo[k];
+  if (s.ship.goods) for (const k of Object.keys(s.ship.goods)) total += s.ship.goods[k];
   return total;
+};
+
+// Add trade goods to the hold, capped by remaining cargo space. Returns
+// the quantity actually loaded.
+SF.addGood = function (s, id, qty) {
+  s.ship.goods = s.ship.goods || {};
+  const space = SF.cargoMax(s) - SF.cargoUsed(s);
+  const added = Math.max(0, Math.min(qty, space));
+  if (added > 0) s.ship.goods[id] = (s.ship.goods[id] || 0) + added;
+  return added;
+};
+
+// Price a race sells its home good to you, or null if it doesn't stock it.
+SF.tradeBuyPrice = function (raceId, good) {
+  return good.home === raceId ? Math.round(good.base * SF.data.TRADE_BUY_MUL) : null;
+};
+
+// Price a race pays you for a good you carry.
+SF.tradeSellPrice = function (raceId, good) {
+  const mul = good.home === raceId ? SF.data.TRADE_SELL_HOME_MUL : SF.data.TRADE_SELL_MUL;
+  return Math.round(good.base * mul);
 };
 
 SF.skill = function (s, role) {

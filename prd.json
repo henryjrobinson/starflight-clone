@@ -122,8 +122,8 @@
         "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done. SF.data.TRADE_GOODS (6, each homed to a race), SF.tradeBuyPrice/tradeSellPrice helpers. Home race sells at 0.65x, others buy at 1.25x -> guaranteed profitable origin->destination. smoke 5/5."
     },
     {
       "id": "US-008",
@@ -137,8 +137,8 @@
         "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done. 'Trade goods' option in friendly encounters opens buy/sell submenu; goods live in s.ship.goods, counted by cargoUsed, capacity + credits enforced. smoke buys from velox, sells to thrynn at profit, verifies accounting and capacity. 5/5."
     },
     {
       "id": "US-009",

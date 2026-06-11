@@ -39,13 +39,62 @@
       { key: 'W', label: 'Open distance', fn: function () { maneuver(30); } },
       { key: 'F', label: 'Attempt escape', fn: flee },
     ];
-    if (!isHostile()) items.push({ key: 'B', label: 'Break contact peacefully', fn: leave });
+    if (!isHostile()) {
+      items.push({ key: 'G', label: 'Trade goods', fn: tradeMenu });
+      items.push({ key: 'B', label: 'Break contact peacefully', fn: leave });
+    }
     SF.ui.setMenu('ENCOUNTER — ' + enc.race.name.toUpperCase() + ' (range ' + Math.round(enc.range) + ')', items);
   }
 
   function leave() {
     SF.ui.log('You disengage and resume course.');
     returnToSpace();
+  }
+
+  // ----------------------------------------------------------- trade goods
+  function tradeMenu() {
+    const s = SF.s;
+    const items = [];
+    for (const g of SF.data.TRADE_GOODS) {
+      const buy = SF.tradeBuyPrice(enc.raceId, g);
+      if (buy !== null) {
+        items.push({ label: 'Buy 10 ' + g.name + ' @ ' + buy + ' cr', fn: function () { buyGood(g); } });
+      }
+    }
+    for (const g of SF.data.TRADE_GOODS) {
+      const have = (s.ship.goods || {})[g.id] || 0;
+      if (have > 0) {
+        items.push({ label: 'Sell ' + have + ' ' + g.name + ' @ ' + SF.tradeSellPrice(enc.raceId, g) + ' cr', fn: function () { sellGood(g); } });
+      }
+    }
+    if (!items.length) items.push({ label: '(no trade available with this race)', fn: function () {}, disabled: true });
+    items.push({ key: 'B', label: 'Done trading', fn: actionMenu });
+    SF.ui.setMenu('TRADE — ' + enc.race.name.toUpperCase(), items);
+  }
+
+  function buyGood(good) {
+    const s = SF.s;
+    const price = SF.tradeBuyPrice(enc.raceId, good);
+    const space = SF.cargoMax(s) - SF.cargoUsed(s);
+    const qty = Math.min(10, Math.floor(s.credits / price), space);
+    if (qty <= 0) { SF.ui.log(space <= 0 ? 'Cargo hold is full.' : 'Not enough credits.', 'warn'); return; }
+    s.credits -= qty * price;
+    SF.addGood(s, good.id, qty);
+    SF.ui.log('Bought ' + qty + ' ' + good.name + ' for ' + SF.ui.fmt(qty * price) + ' cr.', 'good');
+    SF.ui.setStatus();
+    tradeMenu();
+  }
+
+  function sellGood(good) {
+    const s = SF.s;
+    const have = (s.ship.goods || {})[good.id] || 0;
+    if (!have) return;
+    const price = SF.tradeSellPrice(enc.raceId, good);
+    delete s.ship.goods[good.id];
+    SF.earn(s, have * price);
+    SF.ui.log('Sold ' + have + ' ' + good.name + ' to the ' + enc.race.name + ' for ' + SF.ui.fmt(have * price) + ' cr.', 'good');
+    SF.ui.setStatus();
+    tradeMenu();
   }
 
   function returnToSpace() {

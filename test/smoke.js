@@ -532,6 +532,64 @@ console.log('== interstel law ==');
   check('fine option disappears once paid', !SF.ui.menu.items.some(i => i.label.includes('Pay Interstel fine')));
 }
 
+console.log('== trade goods (data) ==');
+{
+  check('TRADE_GOODS well-formed', Array.isArray(SF.data.TRADE_GOODS) && SF.data.TRADE_GOODS.length >= 4 &&
+    SF.data.TRADE_GOODS.every(g => g.id && g.name && g.base > 0 && SF.data.RACES[g.home]));
+  let profitable = false;
+  for (const g of SF.data.TRADE_GOODS) {
+    const buy = SF.tradeBuyPrice(g.home, g);
+    if (buy === null) continue;
+    for (const rid of Object.keys(SF.data.RACES)) {
+      if (rid === g.home) continue;
+      if (SF.tradeSellPrice(rid, g) > buy) profitable = true;
+    }
+  }
+  check('a profitable origin->destination pair exists', profitable);
+}
+
+console.log('== commodity trading ==');
+{
+  SF.s = SF.newState();
+  SF.s.credits = 5000;
+  const good = SF.data.TRADE_GOODS.find(g => g.home === 'velox');
+  SF.setMode('encounter', { raceId: 'velox', from: 'hyper' });
+  const tradeItem = SF.ui.menu.items.find(i => i.label.includes('Trade goods'));
+  check('friendly race offers a trade option', !!tradeItem);
+  tradeItem.fn();
+  const buyItem = SF.ui.menu.items.find(i => i.label.includes('Buy') && i.label.includes(good.name));
+  check('home race sells its own good', !!buyItem);
+  const creditsBeforeBuy = SF.s.credits;
+  const cargoBeforeBuy = SF.cargoUsed(SF.s);
+  buyItem.fn();
+  const bought = (SF.s.ship.goods || {})[good.id] || 0;
+  check('buying loads goods into the hold', bought > 0);
+  check('buying spends credits', SF.s.credits < creditsBeforeBuy);
+  check('goods occupy cargo space', SF.cargoUsed(SF.s) === cargoBeforeBuy + bought);
+  const buyPrice = SF.tradeBuyPrice('velox', good);
+
+  SF.ui.menu.items.find(i => i.label.includes('Done trading')).fn();
+  SF.ui.menu.items.find(i => i.label.includes('Break contact')).fn();
+
+  SF.setMode('encounter', { raceId: 'thrynn', from: 'hyper' });
+  SF.ui.menu.items.find(i => i.label.includes('Trade goods')).fn();
+  const sellItem = SF.ui.menu.items.find(i => i.label.includes('Sell') && i.label.includes(good.name));
+  check('a different race buys the hauled good', !!sellItem);
+  const sellPrice = SF.tradeSellPrice('thrynn', good);
+  check('destination price beats origin price (profit)', sellPrice > buyPrice);
+  const creditsBeforeSell = SF.s.credits;
+  sellItem.fn();
+  check('selling clears the good and pays out', (SF.s.ship.goods || {})[good.id] === undefined &&
+    SF.s.credits === creditsBeforeSell + bought * sellPrice);
+
+  // capacity is enforced
+  SF.s.ship.cargo = { iron: SF.cargoMax(SF.s) };
+  SF.s.ship.goods = {};
+  const beforeFull = SF.cargoUsed(SF.s);
+  SF.addGood(SF.s, good.id, 10);
+  check('cannot load goods past cargo capacity', SF.cargoUsed(SF.s) === beforeFull);
+}
+
 console.log('');
 if (failures) {
   console.error(failures + ' CHECK(S) FAILED');

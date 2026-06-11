@@ -55,6 +55,23 @@ SF.data.ARTIFACTS = [
   { id: 'fuel_coil', name: 'Flux Coil', desc: 'A coil that folds space a little tighter — hyperspace fuel burn reduced 15%.', effect: { fuelMul: 0.85 } },
 ];
 
+// -------------------------------------------------------- trade goods
+// Culture-specific commodities. Each good's home race sells it cheap;
+// other races buy it dear. Buy low at the source, haul it, sell high.
+SF.data.TRADE_GOODS = [
+  { id: 'velox_tools',  name: 'Velox Tools',      base: 120, home: 'velox'  },
+  { id: 'elowan_seed',  name: 'Elowan Seedstock', base: 90,  home: 'elowan' },
+  { id: 'thrynn_spice', name: 'Thrynn Spice',     base: 150, home: 'thrynn' },
+  { id: 'spemin_slime', name: 'Spemin Slime',     base: 40,  home: 'spemin' },
+  { id: 'mechan_core',  name: 'Mechan Cogitator', base: 200, home: 'mechan' },
+  { id: 'humna_sundry', name: 'Humna Sundries',   base: 70,  home: 'humna'  },
+];
+SF.data.TRADE_GOOD_BY_ID = {};
+SF.data.TRADE_GOODS.forEach(function (g) { SF.data.TRADE_GOOD_BY_ID[g.id] = g; });
+SF.data.TRADE_BUY_MUL = 0.65;       // a race sells its home good to you at this
+SF.data.TRADE_SELL_MUL = 1.25;      // a race buys a non-home good from you at this
+SF.data.TRADE_SELL_HOME_MUL = 0.5;  // a race won't pay much for its own product
+
 // ------------------------------------------------------------ planet types
 SF.data.PLANET_TYPES = {
   molten: { name: 'Molten',     colors: ['#601000', '#a02800', '#e06010', '#ffd040'], richMul: 1.6, bioMax: 0, landable: true,  temp: 'searing' },

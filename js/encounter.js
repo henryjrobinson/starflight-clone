@@ -156,7 +156,7 @@
     const s = SF.s;
     if (Math.round(enc.range) > 60) { SF.ui.log('Out of laser range (60). Close the distance.', 'warn'); return; }
     markAggression();
-    if (Math.random() < 0.8) {
+    if (Math.random() < 0.8 + SF.artifactBonus(s, 'hitBonus')) {
       const dmg = playerDamage(3 + s.ship.laser * 3 + SF.skill(s, 'engineering') / 20);
       enc.enemy.hull -= dmg;
       SF.ui.log('Laser hit! Enemy takes ' + dmg + ' damage.', 'good');
@@ -170,7 +170,7 @@
     const s = SF.s;
     if (Math.round(enc.range) > 150) { SF.ui.log('Out of missile range (150).', 'warn'); return; }
     markAggression();
-    if (Math.random() < 0.6) {
+    if (Math.random() < 0.6 + SF.artifactBonus(s, 'hitBonus')) {
       const dmg = playerDamage(14 * s.ship.missile);
       enc.enemy.hull -= dmg;
       SF.ui.log('Missile impact! Enemy takes ' + dmg + ' damage.', 'good');
@@ -262,7 +262,7 @@
     const useMissile = canMissile && (!canLaser || Math.random() < 0.35);
     const base = useMissile ? 12 * enc.enemy.missile : 3 + enc.enemy.laser * 3;
     if (Math.random() < 0.75) {
-      const dmg = Math.max(1, Math.round(base * (1 - 0.12 * s.ship.shield) - s.ship.armor));
+      const dmg = Math.max(1, Math.round((base * (1 - 0.12 * s.ship.shield) - s.ship.armor) * SF.artifactMul(s, 'damageMul')));
       s.ship.hull -= dmg;
       SF.ui.log('HIT! ' + (useMissile ? 'Missile' : 'Laser') + ' strikes for ' + dmg + '. Hull ' +
         Math.max(0, Math.ceil(s.ship.hull)) + '/' + s.ship.hullMax + '.', 'bad');

@@ -45,6 +45,16 @@ SF.data.HIRE_FEE = 500;
 SF.data.TRAIN_FEE = 150;          // per +5 session
 SF.data.HEAL_FEE = 100;           // full vitality restore at starport
 
+// ----------------------------------------------------------- artifacts
+// Usable relics recovered from non-story ruins (distinct from the story
+// tablet/egg). Each grants a passive ship bonus; effects applied where
+// relevant in combat and hyperspace fuel math. Owned once each.
+SF.data.ARTIFACTS = [
+  { id: 'shield_booster', name: 'Resonance Shield', desc: 'Ancient harmonics blunt incoming fire — combat damage taken reduced 15%.', effect: { damageMul: 0.85 } },
+  { id: 'targeting_array', name: 'Seeker Lens', desc: 'A self-aligning optic steadies your aim — weapon hit chance +12%.', effect: { hitBonus: 0.12 } },
+  { id: 'fuel_coil', name: 'Flux Coil', desc: 'A coil that folds space a little tighter — hyperspace fuel burn reduced 15%.', effect: { fuelMul: 0.85 } },
+];
+
 // ------------------------------------------------------------ planet types
 SF.data.PLANET_TYPES = {
   molten: { name: 'Molten',     colors: ['#601000', '#a02800', '#e06010', '#ffd040'], richMul: 1.6, bioMax: 0, landable: true,  temp: 'searing' },

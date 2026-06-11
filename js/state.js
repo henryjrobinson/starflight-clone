@@ -34,9 +34,47 @@ SF.newState = function () {
     flags: { rel: {} },          // story flags + race relations
     visited: { arth: true },     // systems seen on the map
     fluxes: {},                  // discovered continuum fluxes (by index)
+    artifacts: {},               // recovered Ancient artifacts (by id)
     kills: 0,
     earnings: 0,
   };
+};
+
+// ----------------------------------------------------------- artifacts
+SF.hasArtifact = function (s, id) {
+  return !!(s.artifacts && s.artifacts[id]);
+};
+
+// Grant the first not-yet-owned artifact; returns it, or null if all owned.
+SF.grantArtifact = function (s) {
+  s.artifacts = s.artifacts || {};
+  for (const a of SF.data.ARTIFACTS) {
+    if (!s.artifacts[a.id]) {
+      s.artifacts[a.id] = true;
+      return a;
+    }
+  }
+  return null;
+};
+
+// Product of a numeric effect across owned artifacts (default 1 = no change).
+SF.artifactMul = function (s, prop) {
+  let mul = 1;
+  if (!s.artifacts) return mul;
+  for (const a of SF.data.ARTIFACTS) {
+    if (s.artifacts[a.id] && a.effect[prop] !== undefined) mul *= a.effect[prop];
+  }
+  return mul;
+};
+
+// Sum of a numeric effect across owned artifacts (default 0 = no change).
+SF.artifactBonus = function (s, prop) {
+  let sum = 0;
+  if (!s.artifacts) return sum;
+  for (const a of SF.data.ARTIFACTS) {
+    if (s.artifacts[a.id] && a.effect[prop] !== undefined) sum += a.effect[prop];
+  }
+  return sum;
 };
 
 // ------------------------------------------------------------ derived stats
@@ -57,8 +95,9 @@ SF.skill = function (s, role) {
 };
 
 // fuel cost per unit of hyperspace distance, reduced by navigation skill
+// and by the Flux Coil artifact if installed
 SF.fuelPerDist = function (s) {
-  return 0.06 * (1 - SF.skill(s, 'navigation') * 0.003);
+  return 0.06 * (1 - SF.skill(s, 'navigation') * 0.003) * SF.artifactMul(s, 'fuelMul');
 };
 
 // ----------------------------------------------------------------- mutators

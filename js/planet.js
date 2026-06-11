@@ -355,9 +355,15 @@
       SF.ui.log('(Return to Starport Operations for full analysis.)');
     } else if (!s.flags.looted[surf.key]) {
       s.flags.looted[surf.key] = true;
-      const loot = 200 + Math.floor(Math.random() * 600);
-      SF.earn(s, loot);
-      SF.ui.log('You salvage Ancient alloys from the ruins: +' + SF.ui.fmt(loot) + ' cr.', 'good');
+      const artifact = SF.grantArtifact(s);
+      if (artifact) {
+        SF.ui.log('Sealed in a stasis niche you find an ARTIFACT of the Ancients: ' + artifact.name + '.', 'hdr');
+        SF.ui.log(artifact.desc, 'good');
+      } else {
+        const loot = 200 + Math.floor(Math.random() * 600);
+        SF.earn(s, loot);
+        SF.ui.log('You salvage Ancient alloys from the ruins: +' + SF.ui.fmt(loot) + ' cr.', 'good');
+      }
     } else {
       SF.ui.log('These ruins have already given up their secrets.');
     }

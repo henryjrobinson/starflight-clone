@@ -27,8 +27,8 @@
         "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done. SF.data.ARTIFACTS (3), SF.grantArtifact/hasArtifact/artifactMul/artifactBonus in state.js, non-story ruins grant via visitRuins, Operations lists owned. smoke 5/5."
     },
     {
       "id": "US-002",
@@ -43,8 +43,8 @@
         "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done. hitBonus added to laser/missile rolls, damageMul applied to incoming combat damage, fuelMul folded into SF.fuelPerDist. smoke asserts each effect changes its computation. 5/5."
     },
     {
       "id": "US-003",

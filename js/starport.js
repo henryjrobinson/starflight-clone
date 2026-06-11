@@ -117,7 +117,11 @@ SF.modes = SF.modes || {};
     SF.ui.log(SF.data.notice(s.flags));
     SF.ui.log('Service record: day ' + Math.floor(s.day) + ' | ' +
       SF.ui.fmt(s.earnings) + ' cr lifetime earnings | ' + s.kills + ' hostiles destroyed.');
-    if (s.flags.tablet) SF.ui.log('Artifacts logged: Ancient Tablet' + (s.flags.egg ? ', the BLACK EGG' : '') + '.');
+    if (s.flags.tablet) SF.ui.log('Story relics logged: Ancient Tablet' + (s.flags.egg ? ', the BLACK EGG' : '') + '.');
+    const owned = SF.data.ARTIFACTS.filter(function (a) { return SF.hasArtifact(s, a.id); });
+    if (owned.length) {
+      SF.ui.log('Artifacts installed: ' + owned.map(function (a) { return a.name; }).join(', ') + '.', 'good');
+    }
     rootMenu();
   }
 

@@ -324,6 +324,32 @@ driveTo(() => SF.modes.surface.ruin && { x: SF.modes.surface.ruin.x + 0.5, y: SF
   () => s.flags.tablet, 'reach ruins');
 check('tablet recovered, egg coords known', s.flags.tablet && s.flags.eggCoords);
 
+console.log('== artifacts ==');
+{
+  // ownership (US-001): grantArtifact is exactly what a non-story ruin calls.
+  // Use a throwaway state so the live playthrough's combat isn't buffed.
+  const as = SF.newState();
+  const a1 = SF.grantArtifact(as);
+  check('ruin grant returns an artifact and marks it owned', !!a1 && SF.hasArtifact(as, a1.id));
+  const seen = new Set([a1.id]);
+  let dup = false;
+  for (let i = 0; i < SF.data.ARTIFACTS.length + 2; i++) {
+    const a = SF.grantArtifact(as);
+    if (a) { if (seen.has(a.id)) dup = true; seen.add(a.id); }
+  }
+  check('each artifact granted at most once', !dup);
+  check('grants return null once all are owned', SF.grantArtifact(as) === null);
+
+  // effects (US-002): each artifact measurably changes its computation
+  const clean = SF.newState();
+  const coil = SF.newState(); coil.artifacts = { fuel_coil: true };
+  check('fuel_coil lowers hyperspace fuel burn', SF.fuelPerDist(coil) < SF.fuelPerDist(clean));
+  check('shield_booster cuts damage taken (mul<1)', SF.artifactMul({ artifacts: { shield_booster: true } }, 'damageMul') < 1);
+  check('targeting_array raises hit chance (bonus>0)', SF.artifactBonus({ artifacts: { targeting_array: true } }, 'hitBonus') > 0);
+  check('no artifacts is neutral', SF.artifactMul({ artifacts: {} }, 'damageMul') === 1 &&
+    SF.artifactBonus({ artifacts: {} }, 'hitBonus') === 0);
+}
+
 console.log('== mining ==');
 const surfMode = SF.modes.surface;
 const cargoBefore = SF.cargoUsed(s);

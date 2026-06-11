@@ -1,0 +1,158 @@
+{
+  "project": "Starflight Clone",
+  "branchName": "ralph/backlog-features",
+  "description": "Backlog feature set: functional artifacts, colonization recommendations, three new alien races, Interstel law, and commodity trading. Vanilla JS, zero dependencies. The acceptance gate for every story is the headless smoke harness: `node test/smoke.js` must print ALL SMOKE CHECKS PASSED with new checks added and no regressions.",
+  "conventions": [
+    "Vanilla JS only. No new dependencies. Game must still run by opening index.html.",
+    "Follow existing module patterns and code style exactly. Surgical changes only; do not refactor unrelated code.",
+    "New static data goes in js/data.js. Draw code uses SF.gfx helpers and SF.VW/SF.VH.",
+    "New state fields must default safely (guard reads with || {} / || 0) so old saves do not crash.",
+    "Run `node --check` on every changed JS file before running the smoke test.",
+    "Extend test/smoke.js with explicit check(...) assertions for each story's new behavior.",
+    "Done means: node test/smoke.js prints ALL SMOKE CHECKS PASSED, run 5 times with no flaky failures and no previously-passing check regressed.",
+    "Do not touch the held-back items: the Endurium story twist, real-time/multi-ship combat, or sound."
+  ],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add functional artifacts: data, ruins pickup, ownership",
+      "description": "As a player, I want to recover usable relics from non-story ruins so exploration has lasting payoff beyond credits.",
+      "acceptanceCriteria": [
+        "Add SF.data.ARTIFACTS in js/data.js with 3-4 entries, each {id, name, desc, effect} (e.g. Shield Booster, Targeting Array, Fuel Coil).",
+        "In planet.js visitRuins(), after the existing tablet/egg story branches, a non-story ruin can grant one not-yet-owned artifact.",
+        "Track owned artifacts in state (e.g. s.artifacts = {}), each ownable once; default safely for old saves.",
+        "Surface owned artifacts in the Starport Operations briefing text.",
+        "Extend test/smoke.js: grant an artifact via a non-story ruin and assert it is owned exactly once.",
+        "node --check passes on all changed files.",
+        "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Apply artifact effects to combat and fuel",
+      "description": "As a player, I want owned artifacts to actually change ship performance.",
+      "acceptanceCriteria": [
+        "Apply Shield Booster / Targeting Array effects in encounter.js damage and hit-chance math.",
+        "Apply Fuel Coil effect to hyperspace fuel burn (SF.fuelPerDist or the hyper burn in space.js).",
+        "Effects read from state and are no-ops when the artifact is not owned.",
+        "Extend test/smoke.js: assert an owned artifact measurably changes its computation versus the un-owned baseline (e.g. lower damage taken or lower fuel burn).",
+        "node --check passes on all changed files.",
+        "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Planet colonization recommendations",
+      "description": "As a player, I want to recommend habitable worlds to Interstel for a payout, giving a second economy alongside mining.",
+      "acceptanceCriteria": [
+        "Add an orbit-menu action 'Recommend to Interstel' on landable, non-special worlds, available after a sensor scan.",
+        "Add a colonyValue(planet) helper: payout scales with habitability (gravity near 1.0g, temperate climate, bio activity raise it; molten/gas/zero-bio score low), capped (e.g. 200-3000 cr).",
+        "Each planet recommendable once; track in state (e.g. s.flags.colonized) with safe default.",
+        "Pay via SF.earn and log the assessment.",
+        "Extend test/smoke.js: scan + recommend a suitable world, assert credits rose by the expected value, assert a second recommendation on the same world is refused.",
+        "node --check passes on all changed files.",
+        "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Add three alien races (Velox, Gazurtoid, Humna Humna)",
+      "description": "As a player, I want more distinct cultures to meet in space.",
+      "acceptanceCriteria": [
+        "Add Velox (tinkerer/trader, not hostile), Gazurtoid (aquatic zealots, hostile), Humna Humna (frantic merchants, not hostile) to SF.data.RACES following the exact existing shape (name, color, territory circle, hostile, brave, freq, ship stats, hail postures friendly/hostile/obsequious, topics themselves/others/ancients/flares).",
+        "Territories stay within the 250x200 hyperspace bounds and do not fully overlap existing races.",
+        "Distinct dialogue voices; crystal-world coordinate logic stays confined to the existing Spemin/Elowan paths.",
+        "Confirm nothing in space.js/encounter.js assumes a fixed race count; SF.territoryRace and encounter rolls pick them up automatically.",
+        "Extend test/smoke.js: assert the three races exist with valid territory/ship/hail/topics, and that an encounter with each resolves without error (hail + break contact, or combat for Gazurtoid).",
+        "node --check passes on all changed files.",
+        "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Interstel law: bounty accrual for attacking friendlies",
+      "description": "As a player, I want consequences when I fire first on peaceful races.",
+      "acceptanceCriteria": [
+        "When the player fires first on a non-hostile race (the markAggression path in encounter.js), accrue a bounty on state (e.g. s.bounty += amount), default-safe for old saves.",
+        "A standing bounty raises renegade/bounty-hunter encounter frequency in hyperspace.",
+        "Extend test/smoke.js: fire on a friendly race, assert s.bounty > 0.",
+        "node --check passes on all changed files.",
+        "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Interstel law: pay fine at starport to clear bounty",
+      "description": "As a player, I want to settle my bounty so I can stop being hunted.",
+      "acceptanceCriteria": [
+        "Add a Starport action (Operations or a dedicated 'Pay Interstel fine') that clears the bounty for credits.",
+        "The action only appears / is enabled when a bounty exists and the player can afford it.",
+        "Extend test/smoke.js: with a bounty set, pay the fine, assert bounty is cleared and credits were deducted.",
+        "node --check passes on all changed files.",
+        "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Commodity trade goods: data and per-race price modifiers",
+      "description": "As a player, I want culture-specific trade goods with a profitable origin and destination.",
+      "acceptanceCriteria": [
+        "Add SF.data.TRADE_GOODS (e.g. Velox Tools, Elowan Seedstock, Thrynn Spice, Spemin Slime, Mechan Cogitator), each with a base price.",
+        "Add per-race buy/sell modifiers (on the race data or a parallel table) so each good has a clear low-price origin and high-price destination.",
+        "Extend test/smoke.js: assert TRADE_GOODS and the modifier table are well-formed and that at least one good has a strictly profitable origin->destination pair.",
+        "node --check passes on all changed files.",
+        "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Commodity trading UI in friendly encounters",
+      "description": "As a player, I want to buy and sell trade goods when I meet a non-hostile race.",
+      "acceptanceCriteria": [
+        "In encounter.js, add a 'Trade goods' option in the friendly-encounter console: a small menu to buy goods the race sells and sell goods they want.",
+        "Respect cargo capacity and credits; keep cargo/credit accounting exact (goods occupy cargo like minerals or a parallel hold - pick the simpler correct option).",
+        "Extend test/smoke.js: buy a good from one race at its low price, sell it to a different race at a higher price for net profit, verifying cargo/credit accounting and capacity limits.",
+        "node --check passes on all changed files.",
+        "node test/smoke.js prints ALL SMOKE CHECKS PASSED (run 5x, no regressions)."
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Docs refresh: README and ROADMAP",
+      "description": "As a maintainer, I want the docs to reflect the shipped backlog features.",
+      "acceptanceCriteria": [
+        "Update README.md features list (and controls if changed) to cover artifacts, colonization, new races, Interstel law, and commodity trading.",
+        "Update ROADMAP.md: move shipped items to Shipped; leave the Endurium twist, real-time/multi-ship combat, and sound in the backlog as not-started.",
+        "Keep the 'built with Claude' framing intact.",
+        "node test/smoke.js still prints ALL SMOKE CHECKS PASSED."
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

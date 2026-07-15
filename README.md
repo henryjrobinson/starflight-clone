@@ -6,6 +6,11 @@ Zero dependencies, plain HTML/CSS/JS — no build step, no server required.
 
 ## How to play
 
+**Play it in your browser right now: https://starflight-clone.vercel.app**
+
+No install, no build, no server. (If you're hacking on the code locally, just
+open `index.html` in a browser — it's plain HTML/CSS/JS.)
+
 **Controls — keyboard or mouse throughout**
 
 - Arrow keys / WASD — fly the ship (hyperspace, star systems) and drive the terrain vehicle

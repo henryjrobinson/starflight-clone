@@ -6,13 +6,6 @@ Zero dependencies, plain HTML/CSS/JS — no build step, no server required.
 
 ## How to play
 
-Open `index.html` in any browser (double-click it), or:
-
-```sh
-cd starflight-clone
-python3 -m http.server 8080   # then visit http://localhost:8080
-```
-
 **Controls — keyboard or mouse throughout**
 
 - Arrow keys / WASD — fly the ship (hyperspace, star systems) and drive the terrain vehicle
